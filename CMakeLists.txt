@@ -1,0 +1,12 @@
+cmake_minimum_required(VERSION 3.10)
+project(DSP_CPP CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+if(MSVC)
+  add_compile_definitions(_USE_MATH_DEFINES)
+endif()
+add_executable(dsp_app main.cpp SignalGenerator.cpp Modulation.cpp Noise.cpp FFT.cpp
+               Filter.cpp Demodulation.cpp Metrics.cpp Pipeline.cpp)

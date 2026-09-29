@@ -1,0 +1,35 @@
+# VS Code
+.vscode/
+
+# MATLAB
+*.asv
+*.m~
+*.autosave
+
+# MATLAB generated files
+*.fig
+*.slxc
+*.mex*
+*.mat
+
+# C/C++ build files
+build/
+bin/
+obj/
+*.o
+*.obj
+*.exe
+*.out
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

@@ -1,0 +1,1299 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Digital Modulation and Signal Analysis System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --chassis:#e3e8eb; --panel:#f4f6f7; --line:#c3ccd3; --ink:#16212b; --muted:#55626d;
+  --input-bg:#ffffff; --key:#1d5a9b; --key-ink:#ffffff; --key-soft:#dbe7f3;
+  --ok:#2c8a55; --warn:#b3741a; --err:#bb3a2e; --lamp-off:#a9b3bb;
+  --scr-bg:#12202a; --scr-grid:#213340; --scr-axis:#3c5465; --scr-text:#9fb2c0; --scr-legend:rgba(18,32,42,.88);
+  --ch1:#f2c230; --ch2:#4cc9e6; --ch3:#e45fa5; --ch4:#6fd48f; --ch5:#ff9a4d; --noisy:#94a4b2; --ideal:#e8eef2;
+  --err-band:rgba(235,80,80,.30);
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --chassis:#151c22; --panel:#1d262e; --line:#33414c; --ink:#e2e8ed; --muted:#93a2ae;
+    --input-bg:#141b21; --key:#5596da; --key-ink:#0d141a; --key-soft:#20344a;
+    --ok:#4cc27d; --warn:#e0a445; --err:#ef6b5e; --lamp-off:#4a5761;
+    --scr-bg:#0e1920; --scr-grid:#1d2e3a; --scr-legend:rgba(14,25,32,.9);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --chassis:#151c22; --panel:#1d262e; --line:#33414c; --ink:#e2e8ed; --muted:#93a2ae;
+  --input-bg:#141b21; --key:#5596da; --key-ink:#0d141a; --key-soft:#20344a;
+  --ok:#4cc27d; --warn:#e0a445; --err:#ef6b5e; --lamp-off:#4a5761;
+  --scr-bg:#0e1920; --scr-grid:#1d2e3a; --scr-legend:rgba(14,25,32,.9);
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--chassis);color:var(--ink);font-family:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:15px;line-height:1.45}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--key);outline-offset:2px}
+.num,input[type=number],input[type=text],select,td,th{font-family:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;font-variant-numeric:tabular-nums}
+
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px 24px;padding:20px 20px 14px;border-bottom:1px solid var(--line)}
+h1{margin:0;font-size:1.6rem;line-height:1.15;font-weight:700;letter-spacing:-.01em}
+header.top p{margin:4px 0 0;color:var(--muted);max-width:72ch}
+.status{display:flex;align-items:center;gap:9px;font-weight:500;max-width:46ch}
+.lamp{flex:none;width:10px;height:10px;border-radius:50%;background:var(--lamp-off);box-shadow:inset 0 0 0 1px rgba(0,0,0,.2)}
+.lamp.on{background:var(--ok);box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 22%,transparent)}
+.lamp.stale{background:var(--warn)}
+
+.layout{display:grid;grid-template-columns:300px 236px minmax(0,1fr);gap:14px;padding:14px 20px 28px;align-items:start}
+.col-config{grid-column:1}.col-chain{grid-column:2}.col-display{grid-column:3}
+@media (max-width:1200px){
+  .layout{grid-template-columns:310px minmax(0,1fr)}
+  .col-config{grid-column:1;grid-row:1}.col-chain{grid-column:1;grid-row:2}.col-display{grid-column:2;grid-row:1 / span 2}
+}
+@media (max-width:800px){
+  .layout{grid-template-columns:minmax(0,1fr);padding:12px}
+  .col-config,.col-chain,.col-display{grid-column:1;grid-row:auto}
+}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+.col-chain .panel + .panel{margin-top:14px}
+h2{font-size:1.05rem;margin:0 0 10px;font-weight:600}
+h3{font-size:.98rem;margin:18px 0 8px;font-weight:600}
+fieldset{border:0;border-top:1px solid var(--line);margin:0;padding:12px 0 6px}
+fieldset:first-of-type{border-top:0;padding-top:0}
+legend{font-weight:600;padding:0;margin-bottom:6px}
+.field{display:grid;grid-template-columns:minmax(0,1fr) 126px;align-items:center;gap:8px;margin:6px 0}
+.field label{font-size:.92rem}
+.unit{color:var(--muted);font-size:.8rem;margin-left:2px}
+input[type=number],input[type=text],select{width:100%;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--input-bg);font-size:1rem;min-height:32px}
+input[type=text]{letter-spacing:.04em}
+.field.wide{grid-template-columns:1fr}
+.hint{font-size:.83rem;color:var(--muted);margin:4px 0 2px}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 6px}
+.chips button{border:1px solid var(--line);background:var(--input-bg);border-radius:5px;padding:2px 7px;font-family:"Barlow Condensed",sans-serif;font-size:.92rem;cursor:pointer;min-height:28px}
+.chips button[aria-pressed=true]{border-color:var(--key);background:var(--key-soft)}
+.btn{border:1px solid var(--line);background:var(--input-bg);border-radius:6px;padding:6px 12px;cursor:pointer;font-weight:500;min-height:34px}
+.btn:hover{border-color:var(--key)}
+.btn.primary{background:var(--key);color:var(--key-ink);border-color:var(--key);font-weight:600}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+[hidden]{display:none !important}
+
+/* modulation keys */
+.modkeys{display:grid;grid-template-columns:1fr;gap:6px}
+.modkey{display:flex;align-items:baseline;gap:10px;border:1px solid var(--line);border-radius:7px;padding:7px 10px;background:var(--input-bg);cursor:pointer}
+.modkey input{position:absolute;opacity:0;pointer-events:none}
+.modkey .n{font-family:"Barlow Condensed",sans-serif;font-weight:600;font-size:1.12rem;min-width:40px}
+.modkey .d{color:var(--muted);font-size:.86rem}
+.modkey:has(input:checked){border-color:var(--key);background:var(--key-soft);box-shadow:inset 3px 0 0 var(--key)}
+.modkey:has(input:focus-visible){outline:2px solid var(--key);outline-offset:2px}
+@media (max-width:1200px) and (min-width:801px){.modkeys{grid-template-columns:1fr 1fr}}
+@media (max-width:800px){.modkeys{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}}
+
+/* signal chain */
+.chain{list-style:none;margin:0 0 12px;padding:0}
+.chain li{position:relative;padding-bottom:10px}
+.chain li:not(:last-child)::after{content:"";position:absolute;left:17px;top:30px;bottom:-1px;width:2px;background:var(--line)}
+.stage{width:100%;display:flex;align-items:center;gap:12px;text-align:left;border:1px solid var(--line);background:var(--input-bg);border-radius:7px;padding:7px 10px 7px 12px;cursor:pointer;min-height:38px;position:relative;z-index:1}
+.stage:hover:not(:disabled){border-color:var(--key)}
+.stage:disabled{opacity:.5;cursor:not-allowed}
+.stage small{display:block;color:var(--muted);font-size:.78rem;line-height:1.2}
+#runAll{width:100%;min-height:42px;font-size:1rem}
+.msgs{margin-top:12px;display:grid;gap:6px}
+.msg{font-size:.86rem;padding:7px 9px;border-radius:6px;border-left:3px solid;background:var(--input-bg)}
+.msg.error{border-color:var(--err)}
+.msg.warn{border-color:var(--warn)}
+.msg strong{display:block;font-size:.82rem}
+
+/* display */
+.metrics{display:flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin:0 0 12px;background:var(--panel)}
+.metric{flex:1 1 118px;padding:8px 10px;box-shadow:1px 0 0 var(--line),0 1px 0 var(--line)}
+.metric dt{font-size:.8rem;color:var(--muted)}
+.metric dd{margin:0;font-family:"Barlow Condensed",sans-serif;font-size:1.35rem;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.2}
+.tabs{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:2px;border-bottom:1px solid var(--line);margin-bottom:12px}
+.tabs button{flex:none;white-space:nowrap;border:0;background:none;padding:8px 12px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;font-weight:500;color:var(--muted)}
+.tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--key)}
+.viewbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-bottom:10px;font-size:.9rem}
+.viewbar label{display:flex;align-items:center;gap:6px}
+.viewbar select,.viewbar input[type=number]{width:auto;min-width:90px;max-width:150px}
+.viewbar .grow{flex:1;min-width:180px}
+.viewbar .grow input{flex:1}
+.checks{display:flex;flex-wrap:wrap;gap:4px 12px}
+.checks label{gap:5px}
+.sw{display:inline-block;width:12px;height:3px;border-radius:2px}
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:14px}
+figure{margin:0;min-width:0}
+figcaption{font-weight:600;font-size:.93rem;margin-bottom:5px}
+figcaption .sub{font-weight:400;color:var(--muted);font-size:.83rem;margin-left:6px}
+.scope{background:var(--scr-bg);border-radius:6px;height:200px;position:relative;overflow:hidden}
+.scope.tall{height:330px}
+.scope.square{height:auto;aspect-ratio:1/1;max-height:440px}
+.scope canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+th,td{padding:6px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+thead th{background:var(--panel);font-weight:600;font-family:"Barlow",sans-serif;font-size:.85rem;color:var(--muted)}
+tbody tr:last-child td{border-bottom:0}
+.note{font-size:.88rem;color:var(--muted);max-width:80ch}
+.bitsout{margin-top:12px;font-size:.92rem}
+.bitsout .row{display:grid;grid-template-columns:90px minmax(0,1fr);gap:8px;margin:3px 0}
+.bitsout code{font-family:"Barlow Condensed",monospace;letter-spacing:.14em;word-break:break-all;font-size:1rem}
+.bitsout mark{background:var(--err-band);color:inherit;border-radius:2px}
+.sweepctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px;align-items:end}
+.sweepctl label{display:grid;gap:3px;font-size:.88rem}
+.sweepctl .checks{grid-column:1/-1}
+.progress{font-size:.88rem;color:var(--muted);min-height:1.3em}
+ol.log{margin:0;padding-left:22px}
+ol.log li{margin:0 0 8px;max-width:84ch}
+ol.log b{font-weight:600}
+.empty{padding:28px 10px;text-align:center;color:var(--muted)}
+footer{padding:0 20px 24px;color:var(--muted);font-size:.84rem;max-width:100ch}
+@media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div>
+    <h1>Digital Modulation and Signal Analysis System</h1>
+    <p>Generate a message, modulate it with AM, FM, ASK, BPSK or QAM, pass it through an AWGN channel, filter, demodulate and measure how much of the original survives.</p>
+  </div>
+  <div class="status" role="status" aria-live="polite"><span class="lamp" id="statusLamp"></span><span id="statusText">Ready. Pick a modulation and run the pipeline.</span></div>
+</header>
+
+<main class="layout">
+  <!-- LEFT: configuration -->
+  <section class="col-config panel" id="config" aria-label="Signal configuration">
+    <h2>Configuration</h2>
+    <fieldset>
+      <legend>Signal</legend>
+      <div class="field"><label for="fs">Sampling frequency <span class="unit">Hz</span></label><input id="fs" type="number" value="20000" min="1" step="any" inputmode="decimal"></div>
+      <div class="field"><label for="dur">Duration <span class="unit">s</span></label><input id="dur" type="number" value="0.1" min="0" step="any" inputmode="decimal"></div>
+      <div class="field"><label for="N">Number of samples</label><input id="N" type="number" value="2000" min="1" step="1" inputmode="numeric"></div>
+      <div class="field" data-mods="AM FM"><label for="fm">Message frequency <span class="unit">Hz</span></label><input id="fm" type="number" value="50" min="0" step="any" inputmode="decimal"></div>
+      <div class="field" data-mods="AM FM"><label for="Am">Message amplitude</label><input id="Am" type="number" value="1" min="0" step="any" inputmode="decimal"></div>
+      <div class="field"><label for="fc">Carrier frequency <span class="unit">Hz</span></label><input id="fc" type="number" value="1000" min="0" step="any" inputmode="decimal"></div>
+      <div class="field"><label for="Ac">Carrier amplitude</label><input id="Ac" type="number" value="1" min="0" step="any" inputmode="decimal"></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Modulation settings</legend>
+      <div class="field" data-mods="AM"><label for="mu">Modulation index μ</label><input id="mu" type="number" value="0.5" min="0" max="1.5" step="0.05" inputmode="decimal"></div>
+      <div class="field" data-mods="FM"><label for="fdev">Frequency deviation Δf <span class="unit">Hz</span></label><input id="fdev" type="number" value="200" min="0" step="any" inputmode="decimal"></div>
+      <p class="hint" data-mods="FM" id="fmHint"></p>
+      <div class="field" data-mods="ASK"><label for="askLow">Amplitude for bit 0 <span class="unit">× Ac</span></label><input id="askLow" type="number" value="0" min="0" max="0.95" step="0.05" inputmode="decimal"></div>
+      <div class="field" data-mods="QAM"><label for="qamM">QAM order</label><select id="qamM"><option value="4" selected>4-QAM</option><option value="16">16-QAM</option></select></div>
+      <div class="field" data-mods="ASK BPSK QAM"><label for="dataSrc">Data</label><select id="dataSrc"><option value="custom" selected>Bit sequence</option><option value="random">Random bits</option></select></div>
+      <div class="field wide" data-mods="ASK BPSK QAM" data-src="custom"><label for="bitsStr">Bit sequence</label><input id="bitsStr" type="text" value="101101001011" spellcheck="false" autocomplete="off"></div>
+      <div class="field" data-mods="ASK BPSK QAM" data-src="random"><label for="nRand">Number of bits</label><input id="nRand" type="number" value="200" min="2" step="1" inputmode="numeric"></div>
+      <div class="field" data-mods="ASK BPSK QAM" data-src="random"><label for="dataSeed">Data seed</label><input id="dataSeed" type="number" value="7" step="1" inputmode="numeric"></div>
+      <p class="hint" data-mods="ASK BPSK QAM" id="digHint"></p>
+    </fieldset>
+
+    <fieldset>
+      <legend>Noise</legend>
+      <div class="field"><label for="noiseType">Noise type</label><select id="noiseType"><option value="awgn">AWGN</option></select></div>
+      <div class="field"><label for="noiseBy">Set noise by</label><select id="noiseBy"><option value="snr" selected>SNR</option><option value="sigma">Noise level σ</option></select></div>
+      <div class="field" data-noise="snr"><label for="snrRef">SNR reference</label><select id="snrRef"><option value="sample" selected>Sample SNR</option><option value="ebn0">Eb/N0 (digital)</option></select></div>
+      <div class="field" data-noise="snr"><label for="snr">SNR <span class="unit">dB</span></label><input id="snr" type="number" value="10" min="-20" max="60" step="1" inputmode="decimal"></div>
+      <div class="chips" data-noise="snr" id="snrChips" aria-label="Quick SNR values"></div>
+      <div class="field" data-noise="sigma"><label for="sigma">Noise σ</label><input id="sigma" type="number" value="0.1" min="0" step="any" inputmode="decimal"></div>
+      <div class="field"><label for="noiseSeed">Noise seed</label><input id="noiseSeed" type="number" value="42" step="1" inputmode="numeric"></div>
+      <p class="hint" id="noiseReadout">Noise has not been added yet.</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>Filter</legend>
+      <div class="field"><label for="fType">Filter type</label><select id="fType"><option value="low">Low-pass</option><option value="high">High-pass</option><option value="band" selected>Band-pass</option><option value="none">None (bypass)</option></select></div>
+      <div class="field" data-ftype="low high band"><label for="fOrder">Filter order</label><input id="fOrder" type="number" value="4" min="1" max="10" step="1" inputmode="numeric"></div>
+      <div class="field" data-ftype="low high"><label for="fCut">Cutoff frequency <span class="unit">Hz</span></label><input id="fCut" type="number" value="1500" min="0" step="any" inputmode="decimal"></div>
+      <div class="field" data-ftype="band"><label for="fLow">Lower cutoff <span class="unit">Hz</span></label><input id="fLow" type="number" value="850" min="0" step="any" inputmode="decimal"></div>
+      <div class="field" data-ftype="band"><label for="fHigh">Upper cutoff <span class="unit">Hz</span></label><input id="fHigh" type="number" value="1150" min="0" step="any" inputmode="decimal"></div>
+      <p class="hint">Butterworth design, applied forward and backward for zero phase shift.</p>
+      <button type="button" class="btn" id="recFilter">Use recommended filter</button>
+    </fieldset>
+  </section>
+
+  <!-- CENTER: modulation + chain -->
+  <div class="col-chain">
+    <section class="panel" aria-label="Modulation selection">
+      <h2 id="modLabel">Modulation</h2>
+      <div class="modkeys" role="radiogroup" aria-labelledby="modLabel">
+        <label class="modkey"><input type="radio" name="mod" value="AM" checked><span class="n">AM</span><span class="d">Amplitude</span></label>
+        <label class="modkey"><input type="radio" name="mod" value="FM"><span class="n">FM</span><span class="d">Frequency</span></label>
+        <label class="modkey"><input type="radio" name="mod" value="ASK"><span class="n">ASK</span><span class="d">Amplitude shift keying</span></label>
+        <label class="modkey"><input type="radio" name="mod" value="BPSK"><span class="n">BPSK</span><span class="d">Binary phase shift keying</span></label>
+        <label class="modkey"><input type="radio" name="mod" value="QAM"><span class="n">QAM</span><span class="d">Quadrature amplitude</span></label>
+      </div>
+    </section>
+    <section class="panel" aria-label="Signal chain">
+      <h2>Signal chain</h2>
+      <ol class="chain">
+        <li><button class="stage" data-stage="gen" type="button"><span class="lamp"></span><span>Generate signal<small>Message and carrier</small></span></button></li>
+        <li><button class="stage" data-stage="mod" type="button"><span class="lamp"></span><span>Modulate<small>Apply the selected scheme</small></span></button></li>
+        <li><button class="stage" data-stage="noise" type="button"><span class="lamp"></span><span>Add noise<small>AWGN channel</small></span></button></li>
+        <li><button class="stage" data-stage="fft" type="button"><span class="lamp"></span><span>Analyze FFT<small>Spectra and peaks</small></span></button></li>
+        <li><button class="stage" data-stage="filt" type="button"><span class="lamp"></span><span>Apply filter<small>Reduce out-of-band noise</small></span></button></li>
+        <li><button class="stage" data-stage="demod" type="button"><span class="lamp"></span><span>Demodulate<small>Recover and measure</small></span></button></li>
+      </ol>
+      <button type="button" class="btn primary" id="runAll">Run complete pipeline</button>
+      <div class="msgs" id="msgs" aria-live="polite"></div>
+    </section>
+  </div>
+
+  <!-- RIGHT: display -->
+  <section class="col-display panel" aria-label="Results">
+    <dl class="metrics" id="metrics"></dl>
+    <div class="tabs" role="tablist" aria-label="Views">
+      <button role="tab" aria-selected="true" aria-controls="tab-time" id="t-time" data-tab="time">Time domain</button>
+      <button role="tab" aria-selected="false" aria-controls="tab-spec" id="t-spec" data-tab="spec" tabindex="-1">Spectrum</button>
+      <button role="tab" aria-selected="false" aria-controls="tab-const" id="t-const" data-tab="const" tabindex="-1">Constellation</button>
+      <button role="tab" aria-selected="false" aria-controls="tab-sweep" id="t-sweep" data-tab="sweep" tabindex="-1">SNR sweep</button>
+      <button role="tab" aria-selected="false" aria-controls="tab-cmp" id="t-cmp" data-tab="cmp" tabindex="-1">Comparison</button>
+      <button role="tab" aria-selected="false" aria-controls="tab-log" id="t-log" data-tab="log" tabindex="-1">Processing log</button>
+    </div>
+
+    <section id="tab-time" role="tabpanel" aria-labelledby="t-time">
+      <div class="viewbar">
+        <label>Time window
+          <select id="win"><option value="1" selected>Whole signal</option><option value="0.5">First half</option><option value="0.25">A quarter</option><option value="0.1">A tenth</option><option value="0.04">4 percent</option></select>
+        </label>
+        <label class="grow">Start <input type="range" id="winStart" min="0" max="100" value="0" aria-label="Window start position"></label>
+      </div>
+      <div class="figs">
+        <figure><figcaption id="cap-msg">Message signal m(t)</figcaption><div class="scope"><canvas id="p-msg" role="img" aria-label="Message signal plot"></canvas></div></figure>
+        <figure><figcaption id="cap-car">Carrier c(t)</figcaption><div class="scope"><canvas id="p-car" role="img" aria-label="Carrier plot"></canvas></div></figure>
+        <figure><figcaption id="cap-mod">Modulated signal s(t)</figcaption><div class="scope"><canvas id="p-mod" role="img" aria-label="Modulated signal plot"></canvas></div></figure>
+        <figure><figcaption id="cap-noisy">Noisy signal r(t)</figcaption><div class="scope"><canvas id="p-noisy" role="img" aria-label="Noisy signal plot"></canvas></div></figure>
+        <figure><figcaption id="cap-filt">Filtered signal</figcaption><div class="scope"><canvas id="p-filt" role="img" aria-label="Filtered signal plot"></canvas></div></figure>
+        <figure><figcaption id="cap-rec">Recovered vs original</figcaption><div class="scope"><canvas id="p-rec" role="img" aria-label="Recovered and original signal plot"></canvas></div></figure>
+      </div>
+      <div class="bitsout" id="bitsOut" hidden></div>
+    </section>
+
+    <section id="tab-spec" role="tabpanel" aria-labelledby="t-spec" hidden>
+      <div class="viewbar">
+        <div class="checks" id="specChecks"></div>
+        <label>Scale <select id="specScale"><option value="db" selected>dB</option><option value="lin">Linear</option></select></label>
+        <label>Window <select id="specWin"><option value="hann" selected>Hann</option><option value="rect">Rectangular</option></select></label>
+        <label>Max frequency <input type="number" id="specMax" placeholder="Auto" min="1" step="any" inputmode="decimal"> Hz</label>
+      </div>
+      <figure><figcaption>Single-sided magnitude spectrum <span class="sub" id="specInfo"></span></figcaption><div class="scope tall"><canvas id="p-spec" role="img" aria-label="Magnitude spectrum plot"></canvas></div></figure>
+      <h3>Dominant frequency components</h3>
+      <div class="tablewrap"><table id="peaks"></table></div>
+      <h3>Filter magnitude response</h3>
+      <figure><figcaption class="sub" id="frespCap" style="font-weight:400;color:var(--muted)"></figcaption><div class="scope"><canvas id="p-fresp" role="img" aria-label="Filter response plot"></canvas></div></figure>
+    </section>
+
+    <section id="tab-const" role="tabpanel" aria-labelledby="t-const" hidden>
+      <p class="note" id="constNote"></p>
+      <div class="figs">
+        <figure><figcaption>Noisy constellation <span class="sub">before the filter</span></figcaption><div class="scope square"><canvas id="p-cn" role="img" aria-label="Noisy constellation"></canvas></div></figure>
+        <figure><figcaption>Recovered constellation <span class="sub">after the filter, with decisions</span></figcaption><div class="scope square"><canvas id="p-cr" role="img" aria-label="Recovered constellation"></canvas></div></figure>
+      </div>
+      <h3>Input symbols</h3>
+      <div class="tablewrap"><table id="symtab"></table></div>
+    </section>
+
+    <section id="tab-sweep" role="tabpanel" aria-labelledby="t-sweep" hidden>
+      <div class="sweepctl">
+        <label>SNR from (dB)<input type="number" id="swFrom" value="0" step="1"></label>
+        <label>SNR to (dB)<input type="number" id="swTo" value="30" step="1"></label>
+        <label>Step (dB)<input type="number" id="swStep" value="5" step="1" min="0.5"></label>
+        <label>Digital SNR axis<select id="swAxis"><option value="ebn0" selected>Eb/N0</option><option value="sample">Sample SNR</option></select></label>
+        <label>Random bits per point<input type="number" id="swBits" value="2000" min="20" step="1"></label>
+        <div class="checks" id="swMods"></div>
+        <div><button type="button" class="btn primary" id="swRun">Run SNR sweep</button></div>
+      </div>
+      <p class="progress" id="swProgress" aria-live="polite"></p>
+      <div class="figs">
+        <figure><figcaption>BER vs SNR</figcaption><div class="scope tall"><canvas id="p-ber" role="img" aria-label="Bit error rate versus SNR"></canvas></div></figure>
+        <figure><figcaption>Accuracy vs SNR</figcaption><div class="scope tall"><canvas id="p-acc" role="img" aria-label="Accuracy versus SNR"></canvas></div></figure>
+        <figure><figcaption>MSE vs SNR <span class="sub">analog reconstruction</span></figcaption><div class="scope tall"><canvas id="p-mse" role="img" aria-label="MSE versus SNR"></canvas></div></figure>
+      </div>
+      <p class="note" id="swNote"></p>
+      <h3>Sweep results</h3>
+      <div class="tablewrap"><table id="swTable"><tbody><tr><td class="empty">Run the sweep to fill this table.</td></tr></tbody></table></div>
+    </section>
+
+    <section id="tab-cmp" role="tabpanel" aria-labelledby="t-cmp" hidden>
+      <p class="note">Runs all five schemes with your current signal, data and noise settings. Each scheme uses its recommended band-pass filter so the comparison is fair. Analog schemes always use sample SNR.</p>
+      <p><button type="button" class="btn primary" id="cmpRun">Compare all modulations</button></p>
+      <div class="tablewrap"><table id="cmpTable"><tbody><tr><td class="empty">No comparison yet.</td></tr></tbody></table></div>
+      <p class="note" id="cmpNote"></p>
+    </section>
+
+    <section id="tab-log" role="tabpanel" aria-labelledby="t-log" hidden>
+      <ol class="log" id="log"><li class="note">Each stage writes what it did here.</li></ol>
+    </section>
+  </section>
+</main>
+<footer>All processing runs in your browser: seeded Gaussian noise, a radix-2 FFT, Butterworth biquad filters and coherent I/Q receivers. Results are computed from the simulation every time, never stored values.</footer>
+
+<script>
+'use strict';
+const TAU = 2 * Math.PI;
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const MODS = {
+  AM:   { analog: true,  color: '--ch1' },
+  FM:   { analog: true,  color: '--ch2' },
+  ASK:  { analog: false, color: '--ch3' },
+  BPSK: { analog: false, color: '--ch4' },
+  QAM:  { analog: false, color: '--ch5' }
+};
+const MOD_KEYS = Object.keys(MODS);
+
+/* ================= DSP core ================= */
+function mulberry32(a){ return function(){ a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function gaussGen(seed){
+  const r = mulberry32(seed | 0); let spare = null;
+  return () => {
+    if (spare !== null){ const s = spare; spare = null; return s; }
+    let u = 0; while (u === 0) u = r(); const v = r();
+    const m = Math.sqrt(-2 * Math.log(u)); spare = m * Math.sin(TAU * v); return m * Math.cos(TAU * v);
+  };
+}
+function nextPow2(n){ let p = 1; while (p < n) p <<= 1; return p; }
+
+// Iterative radix-2 Cooley-Tukey FFT (in place)
+function fft(re, im){
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++){
+    let bit = n >> 1; for (; j & bit; bit >>= 1) j ^= bit; j ^= bit;
+    if (i < j){ let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; }
+  }
+  for (let len = 2; len <= n; len <<= 1){
+    const half = len >> 1, ang = -TAU / len;
+    for (let k = 0; k < half; k++){
+      const wr = Math.cos(ang * k), wi = Math.sin(ang * k);
+      for (let i = k; i < n; i += len){
+        const b = i + half;
+        const tr = re[b] * wr - im[b] * wi, ti = re[b] * wi + im[b] * wr;
+        re[b] = re[i] - tr; im[b] = im[i] - ti; re[i] += tr; im[i] += ti;
+      }
+    }
+  }
+}
+
+// Butterworth low/high-pass as cascaded biquads (bilinear transform, prewarped at fc)
+function butter(type, fc, fs, order){
+  const secs = [], w0 = TAU * fc / fs, cw = Math.cos(w0), sw = Math.sin(w0);
+  for (let k = 0; k < Math.floor(order / 2); k++){
+    const Q = 1 / (2 * Math.sin(Math.PI * (2 * k + 1) / (2 * order)));
+    const al = sw / (2 * Q), a0 = 1 + al;
+    const b = type === 'low' ? [(1 - cw) / 2, 1 - cw, (1 - cw) / 2] : [(1 + cw) / 2, -(1 + cw), (1 + cw) / 2];
+    secs.push({ b: b.map(v => v / a0), a: [1, -2 * cw / a0, (1 - al) / a0] });
+  }
+  if (order % 2){
+    const K = Math.tan(w0 / 2), a1 = (K - 1) / (K + 1);
+    if (type === 'low'){ const b0 = K / (1 + K); secs.push({ b: [b0, b0, 0], a: [1, a1, 0] }); }
+    else { const b0 = 1 / (1 + K); secs.push({ b: [b0, -b0, 0], a: [1, a1, 0] }); }
+  }
+  return secs;
+}
+// Butterworth band-pass: low-pass prototype -> band-pass transform -> bilinear (prewarped edges)
+function butterBand(f1, f2, fs, order){
+  const W1 = 2 * fs * Math.tan(Math.PI * f1 / fs), W2 = 2 * fs * Math.tan(Math.PI * f2 / fs);
+  const w0sq = W1 * W2, B = W2 - W1, poles = [];
+  for (let k = 0; k < order; k++){
+    const th = Math.PI * (2 * k + order + 1) / (2 * order);
+    const pr = Math.cos(th) * B, pi = Math.sin(th) * B;             // p*B
+    const dr = pr * pr - pi * pi - 4 * w0sq, di = 2 * pr * pi;      // (pB)^2 - 4w0^2
+    const mag = Math.hypot(dr, di), sr = Math.sqrt((mag + dr) / 2), si = Math.sign(di || 1) * Math.sqrt(Math.max(0, (mag - dr) / 2));
+    for (const sg of [1, -1]){
+      const s_r = (pr + sg * sr) / 2, s_i = (pi + sg * si) / 2;       // analog BP pole
+      const nr = 2 * fs + s_r, ni = s_i, er = 2 * fs - s_r, ei = -s_i; // z = (2fs+s)/(2fs-s)
+      const den = er * er + ei * ei, zr = (nr * er + ni * ei) / den, zi = (ni * er - nr * ei) / den;
+      if (zi > 1e-12) poles.push([zr, zi]);
+    }
+  }
+  if (poles.length !== order) return null;
+  const secs = poles.map(([zr, zi]) => ({ b: [1, 0, -1], a: [1, -2 * zr, zr * zr + zi * zi] }));
+  const wc = 2 * Math.atan(Math.sqrt(w0sq) / (2 * fs)) * fs / TAU;  // digital centre frequency
+  const g = Math.sqrt(sosMag2(secs, wc, fs)), k0 = 1 / g;
+  secs[0].b = secs[0].b.map(v => v * k0);
+  return secs;
+}
+function sosfilt(secs, x){
+  const y = Float64Array.from(x);
+  for (const s of secs){
+    const [b0, b1, b2] = s.b, a1 = s.a[1], a2 = s.a[2]; let z1 = 0, z2 = 0;
+    for (let i = 0; i < y.length; i++){ const xi = y[i], yi = b0 * xi + z1; z1 = b1 * xi - a1 * yi + z2; z2 = b2 * xi - a2 * yi; y[i] = yi; }
+  }
+  return y;
+}
+// Zero-phase filtering with mirror (even) reflection padding to suppress edge transients
+function filtfilt(secs, x, pad){
+  const n = x.length; pad = Math.max(0, Math.min(pad, n - 1));
+  const ext = new Float64Array(n + 2 * pad);
+  for (let i = 0; i < pad; i++) ext[i] = x[pad - i];
+  ext.set(x, pad);
+  for (let i = 0; i < pad; i++) ext[pad + n + i] = x[n - 2 - i];
+  let y = sosfilt(secs, ext); y.reverse(); y = sosfilt(secs, y); y.reverse();
+  return y.slice(pad, pad + n);
+}
+function lowpass(x, fc, fs, order = 4){ return filtfilt(butter('low', fc, fs, order), x, Math.round(3 * fs / fc)); }
+function sosMag2(secs, f, fs){ // |H|^2 of one pass == magnitude of the zero-phase filter
+  const w = TAU * f / fs, c1 = Math.cos(w), s1 = Math.sin(w), c2 = Math.cos(2 * w), s2 = Math.sin(2 * w); let g = 1;
+  for (const s of secs){
+    const nr = s.b[0] + s.b[1] * c1 + s.b[2] * c2, ni = -(s.b[1] * s1 + s.b[2] * s2);
+    const dr = 1 + s.a[1] * c1 + s.a[2] * c2, di = -(s.a[1] * s1 + s.a[2] * s2);
+    g *= (nr * nr + ni * ni) / (dr * dr + di * di);
+  }
+  return g;
+}
+function erfc(x){
+  const z = Math.abs(x), t = 1 / (1 + 0.5 * z);
+  const r = t * Math.exp(-z * z - 1.26551223 + t * (1.00002368 + t * (0.37409196 + t * (0.09678418 + t * (-0.18628806 + t * (0.27886807 + t * (-1.13520398 + t * (1.48851587 + t * (-0.82215223 + t * 0.17087277)))))))));
+  return x >= 0 ? r : 2 - r;
+}
+const Qf = x => 0.5 * erfc(x / Math.SQRT2);
+
+/* ================= Configuration ================= */
+let currentMod = 'AM';
+const numVal = id => { const v = $('#' + id).value.trim(); return v === '' ? NaN : Number(v); };
+function readConfig(){
+  return {
+    mod: currentMod, fs: numVal('fs'), dur: numVal('dur'), fm: numVal('fm'), Am: numVal('Am'), fc: numVal('fc'), Ac: numVal('Ac'),
+    mu: numVal('mu'), fdev: numVal('fdev'), askLow: numVal('askLow'), qamM: parseInt($('#qamM').value, 10),
+    dataSrc: $('#dataSrc').value, bitsStr: $('#bitsStr').value.replace(/\s+/g, ''), nRand: numVal('nRand'), dataSeed: numVal('dataSeed'),
+    noiseBy: $('#noiseBy').value, snrRef: $('#snrRef').value, snr: numVal('snr'), sigma: numVal('sigma'), noiseSeed: numVal('noiseSeed'),
+    fType: $('#fType').value, fOrder: numVal('fOrder'), fCut: numVal('fCut'), fLow: numVal('fLow'), fHigh: numVal('fHigh')
+  };
+}
+function getBits(cfg){
+  if (cfg._bits) return cfg._bits;
+  if (cfg.dataSrc === 'custom'){ const s = cfg.bitsStr, b = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i) === 49 ? 1 : 0; return b; }
+  const r = mulberry32((cfg.dataSeed | 0) || 1), b = new Uint8Array(cfg.nRand); for (let i = 0; i < b.length; i++) b[i] = r() < 0.5 ? 1 : 0; return b;
+}
+function deriveDigital(cfg){
+  const nb = cfg._bits ? cfg._bits.length : (cfg.dataSrc === 'custom' ? cfg.bitsStr.length : cfg.nRand);
+  const k = cfg.mod === 'QAM' ? Math.log2(cfg.qamM) : 1;
+  const spb = cfg._spb || Math.max(1, Math.round(cfg.fs * cfg.dur / Math.max(nb, 1)));
+  const nbp = Math.ceil(nb / k) * k;
+  return { nb, k, spb, nbp, sps: spb * k, N: nbp * spb, Rb: cfg.fs / spb, Rs: cfg.fs / (spb * k) };
+}
+const fmtHz = v => (Math.abs(v) >= 1000 ? (+(v / 1000).toPrecision(4)) + ' kHz' : (+v.toPrecision(4)) + ' Hz');
+function fmt(v, d = 4){
+  if (v === null || v === undefined || Number.isNaN(v)) return '—';
+  if (v === Infinity) return '∞'; if (v === -Infinity) return '−∞';
+  if (v === 0) return '0';
+  const a = Math.abs(v);
+  if (a < 1e-3 || a >= 1e6) return v.toExponential(2).replace('e-', '×10^-').replace(/×10\^-0?(\d+)/, (m, e) => '×10' + sup('-' + e)).replace('e+', 'e');
+  return (+v.toPrecision(d)).toString();
+}
+function sup(s){ const m = { '-': '⁻', '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹' }; return [...String(s)].map(c => m[c] || c).join(''); }
+
+/* ================= Validation ================= */
+function validate(cfg){
+  const E = [], W = [], ok = Number.isFinite;
+  const analog = MODS[cfg.mod].analog;
+  const need = [['fs', 'Sampling frequency'], ['dur', 'Duration'], ['fc', 'Carrier frequency'], ['Ac', 'Carrier amplitude']];
+  if (analog) need.push(['fm', 'Message frequency'], ['Am', 'Message amplitude']);
+  for (const [k, l] of need){ if (!ok(cfg[k])) E.push(`${l} must be a number.`); else if (cfg[k] <= 0) E.push(`${l} must be greater than zero.`); }
+  if (E.length) return { errors: E, warnings: W };
+  if (cfg.fs > 2e6) E.push('Sampling frequency is limited to 2 MHz in the browser.');
+  let fmax, N;
+  if (analog){
+    N = Math.round(cfg.fs * cfg.dur);
+    if (cfg.mod === 'AM'){
+      if (!ok(cfg.mu) || cfg.mu <= 0 || cfg.mu > 1.5) E.push('Modulation index μ must be greater than 0 and at most 1.5.');
+      else if (cfg.mu > 1) W.push(`μ = ${cfg.mu} over-modulates the carrier, so the envelope detector will distort the message.`);
+      fmax = cfg.fc + cfg.fm;
+      if (cfg.fc <= 2 * cfg.fm) E.push(`Carrier frequency (${cfg.fc} Hz) must be more than twice the message frequency (${cfg.fm} Hz) for envelope detection.`);
+    } else {
+      if (!ok(cfg.fdev) || cfg.fdev <= 0) E.push('Frequency deviation Δf must be greater than zero.');
+      else {
+        const B = cfg.fdev + cfg.fm; fmax = cfg.fc + B;
+        if (cfg.fc <= B) E.push(`Carrier frequency (${cfg.fc} Hz) must exceed Δf + fm = ${B} Hz, otherwise the FM spectrum folds through 0 Hz.`);
+        else if (cfg.fc < 2 * B) W.push(`The carrier sits close to the FM bandwidth (Carson ${2 * B} Hz). Demodulation will be noisier; try fc ≥ ${2 * B} Hz.`);
+      }
+    }
+    if (ok(cfg.fm) && cfg.fm * cfg.dur < 1) W.push('The duration covers less than one message cycle, so the reconstruction metrics will be less meaningful.');
+  } else {
+    if (!cfg._bits){
+      if (cfg.dataSrc === 'custom'){
+        if (!/^[01]+$/.test(cfg.bitsStr)) E.push('The bit sequence may contain only 0 and 1.');
+        else if (cfg.bitsStr.length < 2 || cfg.bitsStr.length > 4096) E.push('The bit sequence must be 2 to 4096 bits long.');
+      } else {
+        if (!Number.isInteger(cfg.nRand) || cfg.nRand < 2 || cfg.nRand > 100000) E.push('Number of random bits must be a whole number from 2 to 100,000.');
+        if (!Number.isInteger(cfg.dataSeed)) E.push('Data seed must be a whole number.');
+      }
+    }
+    if (cfg.mod === 'ASK' && (!ok(cfg.askLow) || cfg.askLow < 0 || cfg.askLow >= 1)) E.push('The ASK amplitude for bit 0 must be at least 0 and below 1.');
+    if (E.length) return { errors: E, warnings: W };
+    const d = deriveDigital(cfg); N = d.N;
+    if (d.spb < 4) E.push(`Only ${d.spb} samples per bit. Increase the sampling frequency or duration, or send fewer bits.`);
+    fmax = cfg.fc + d.Rs;
+    const cyc = cfg.fc / d.Rs;
+    if (cyc < 1) E.push(`The carrier completes only ${cyc.toFixed(2)} cycles per symbol. Raise the carrier above ${fmtHz(d.Rs)} or lower the bit rate.`);
+    else if (cyc < 2) W.push(`Only ${cyc.toFixed(1)} carrier cycles per symbol. The correlator will be less accurate; aim for at least 2.`);
+    if (cfg.mod === 'QAM' && d.nb % d.k) W.push(`${cfg.qamM}-QAM carries ${d.k} bits per symbol, so ${d.nbp - d.nb} zero bit(s) pad the last symbol. Padding is excluded from the BER.`);
+  }
+  if (fmax !== undefined){
+    if (cfg.fs <= 2 * fmax) E.push(`Sampling frequency (${cfg.fs} Hz) must be greater than twice the highest signal frequency (2 × ${+fmax.toPrecision(5)} = ${+(2 * fmax).toPrecision(5)} Hz).`);
+    else if (cfg.fs < 4 * fmax) W.push('The sampling frequency is below 4× the highest signal frequency, so waveforms will look coarse.');
+  }
+  if (N !== undefined){
+    if (N < 64) E.push(`Only ${N} samples. Increase the duration or sampling frequency (at least 64 samples).`);
+    if (N > 600000) E.push(`${N.toLocaleString()} samples is more than the browser can process comfortably (limit 600,000). Reduce the duration, sampling frequency or number of bits.`);
+  }
+  if (cfg.noiseBy === 'snr'){
+    if (!ok(cfg.snr) || cfg.snr < -20 || cfg.snr > 60) E.push('SNR must be between −20 and 60 dB.');
+    if (cfg.snrRef === 'ebn0' && analog) E.push('Eb/N0 applies to digital schemes only. Set the SNR reference to sample SNR for AM and FM.');
+  } else if (!ok(cfg.sigma) || cfg.sigma < 0) E.push('Noise level σ must be zero or positive.');
+  if (!Number.isInteger(cfg.noiseSeed)) E.push('Noise seed must be a whole number.');
+  if (cfg.fType !== 'none'){
+    const ny = cfg.fs / 2;
+    if (!Number.isInteger(cfg.fOrder) || cfg.fOrder < 1 || cfg.fOrder > 10) E.push('Filter order must be a whole number from 1 to 10.');
+    if (cfg.fType === 'band'){
+      if (!(cfg.fLow > 0 && cfg.fHigh > cfg.fLow && cfg.fHigh < ny)) E.push(`Band-pass edges must satisfy 0 < lower < upper < fs/2 (${ny} Hz).`);
+      else if (cfg.fc < cfg.fLow || cfg.fc > cfg.fHigh) W.push(`The carrier (${cfg.fc} Hz) lies outside the pass band ${cfg.fLow}–${cfg.fHigh} Hz, so most of the signal will be removed.`);
+    } else {
+      if (!(cfg.fCut > 0 && cfg.fCut < ny)) E.push(`Cutoff frequency must be between 0 and fs/2 (${ny} Hz).`);
+      else if (cfg.fType === 'low' && cfg.fCut < cfg.fc) W.push(`The low-pass cutoff (${cfg.fCut} Hz) is below the carrier (${cfg.fc} Hz), so the modulated signal is removed before demodulation.`);
+      else if (cfg.fType === 'high' && cfg.fCut > cfg.fc) W.push(`The high-pass cutoff (${cfg.fCut} Hz) is above the carrier (${cfg.fc} Hz), so the modulated signal is removed before demodulation.`);
+    }
+  }
+  return { errors: E, warnings: W };
+}
+
+function recommendedFilter(cfg){
+  let hb;
+  if (cfg.mod === 'AM') hb = 3 * cfg.fm;
+  else if (cfg.mod === 'FM') hb = 1.5 * (cfg.fdev + cfg.fm) + cfg.fm;
+  else { const d = deriveDigital(cfg); hb = 2 * d.Rs; }
+  if (!(hb > 0) || !(cfg.fc > 0) || !(cfg.fs > 0)) return null;
+  const hi = Math.round(Math.min(cfg.fc + hb, 0.95 * cfg.fs / 2));
+  const lo = Math.round(cfg.fc - hb);
+  if (lo < Math.max(1, 0.01 * cfg.fs / 2)) return { fType: 'low', fOrder: 4, fCut: hi, fLow: cfg.fLow, fHigh: cfg.fHigh };
+  return { fType: 'band', fOrder: 4, fLow: lo, fHigh: hi, fCut: cfg.fCut };
+}
+
+/* ================= Pipeline stages ================= */
+function buildSignal(cfg){
+  const fs = cfg.fs, digital = !MODS[cfg.mod].analog;
+  let N, d = null, bits = null, bitsPad = null;
+  if (digital){ d = deriveDigital(cfg); bits = getBits(cfg); bitsPad = new Uint8Array(d.nbp); bitsPad.set(bits); N = d.N; }
+  else N = Math.round(fs * cfg.dur);
+  const t = new Float64Array(N), tms = new Float64Array(N), cosC = new Float64Array(N), sinC = new Float64Array(N), carrier = new Float64Array(N);
+  const msg = new Float64Array(N), msgNorm = new Float64Array(N);
+  for (let n = 0; n < N; n++){
+    const tt = n / fs; t[n] = tt; tms[n] = tt * 1000;
+    const w = TAU * cfg.fc * tt; cosC[n] = Math.cos(w); sinC[n] = Math.sin(w); carrier[n] = cfg.Ac * cosC[n];
+    if (digital){ msg[n] = bitsPad[Math.floor(n / d.spb)]; msgNorm[n] = msg[n]; }
+    else { msgNorm[n] = Math.sin(TAU * cfg.fm * tt); msg[n] = cfg.Am * msgNorm[n]; }
+  }
+  return Object.assign({ fs, N, t, tms, cosC, sinC, carrier, msg, msgNorm, digital, bits, bitsPad }, d || {});
+}
+
+const GRAY2 = { '00': -3, '01': -1, '11': 1, '10': 3 };
+const LVL2BITS = { '-3': [0, 0], '-1': [0, 1], '1': [1, 1], '3': [1, 0] };
+function qamMap(b, M){
+  if (M === 4) return [b[0] ? 1 : -1, b[1] ? 1 : -1];
+  return [GRAY2['' + b[0] + b[1]], GRAY2['' + b[2] + b[3]]];
+}
+function qamSlice(v, M){
+  if (M === 4) return v >= 0 ? 1 : -1;
+  return v < -2 ? -3 : v < 0 ? -1 : v < 2 ? 1 : 3;
+}
+function qamBits(level, M){ return M === 4 ? [level > 0 ? 1 : 0] : LVL2BITS[level]; }
+
+function modulate(cfg, sig){
+  const N = sig.N, s = new Float64Array(N), Ac = cfg.Ac; let sym = null;
+  switch (cfg.mod){
+    case 'AM': for (let n = 0; n < N; n++) s[n] = Ac * (1 + cfg.mu * sig.msgNorm[n]) * sig.cosC[n]; break;
+    case 'FM': { // phase = 2πΔf ∫ m(τ)dτ, trapezoidal integration
+      let ph = 0; const K = TAU * cfg.fdev / sig.fs;
+      for (let n = 0; n < N; n++){ ph += K * sig.msgNorm[n] * (n ? 0.5 : 0) + (n ? K * sig.msgNorm[n - 1] * 0.5 : 0); s[n] = Ac * Math.cos(TAU * cfg.fc * sig.t[n] + ph); }
+      break; }
+    case 'ASK': for (let n = 0; n < N; n++){ const b = sig.bitsPad[Math.floor(n / sig.spb)]; s[n] = (b ? Ac : Ac * cfg.askLow) * sig.cosC[n]; } break;
+    case 'BPSK': for (let n = 0; n < N; n++){ const b = sig.bitsPad[Math.floor(n / sig.spb)]; s[n] = (b ? Ac : -Ac) * sig.cosC[n]; } break;
+    case 'QAM': {
+      const M = cfg.qamM, k = sig.k, ns = sig.bitsPad.length / k, Es = M === 4 ? 2 : 10, g = Ac / Math.sqrt(Es);
+      const I = new Float64Array(ns), Q = new Float64Array(ns);
+      for (let j = 0; j < ns; j++){ const [i, q] = qamMap(sig.bitsPad.subarray(j * k, (j + 1) * k), M); I[j] = i; Q[j] = q; }
+      for (let n = 0; n < N; n++){ const j = Math.floor(n / sig.sps); s[n] = g * (I[j] * sig.cosC[n] - Q[j] * sig.sinC[n]); }
+      sym = { I, Q, Es }; break;
+    }
+  }
+  let Ps = 0; for (let n = 0; n < N; n++) Ps += s[n] * s[n]; Ps /= N;
+  return { s, sym, Ps };
+}
+
+function addNoise(cfg, sig, mod){
+  const N = sig.N, Ps = mod.Ps; let sigma;
+  if (cfg.noiseBy === 'sigma') sigma = cfg.sigma;
+  else if (cfg.snrRef === 'ebn0' && sig.digital) sigma = Math.sqrt(Ps * sig.spb / (2 * Math.pow(10, cfg.snr / 10)));
+  else sigma = Math.sqrt(Ps / Math.pow(10, cfg.snr / 10));
+  const g = gaussGen(cfg.noiseSeed), noisy = new Float64Array(N); let Pn = 0;
+  for (let n = 0; n < N; n++){ const w = sigma * g(); noisy[n] = mod.s[n] + w; Pn += w * w; }
+  Pn /= N;
+  const snrMeas = Pn > 0 ? 10 * Math.log10(Ps / Pn) : Infinity;
+  const ebn0Meas = sig.digital ? (Pn > 0 ? 10 * Math.log10(Ps * sig.spb / (2 * Pn)) : Infinity) : null;
+  return { noisy, sigma, Pn, snrMeas, ebn0Meas };
+}
+
+function designFilter(cfg){
+  if (cfg.fType === 'none') return null;
+  const o = cfg.fOrder, fs = cfg.fs;
+  if (cfg.fType === 'low') return { type: 'low', order: o, secs: butter('low', cfg.fCut, fs, o), edges: [cfg.fCut] };
+  if (cfg.fType === 'high') return { type: 'high', order: o, secs: butter('high', cfg.fCut, fs, o), edges: [cfg.fCut] };
+  const bp = butterBand(cfg.fLow, cfg.fHigh, fs, o);
+  return { type: 'band', order: o, secs: bp || [...butter('high', cfg.fLow, fs, o), ...butter('low', cfg.fHigh, fs, o)], edges: [cfg.fLow, cfg.fHigh] };
+}
+function applyFilter(filt, x, fs){
+  if (!filt) return Float64Array.from(x);
+  const pad = Math.max(12 * filt.order, Math.round(3 * fs / Math.min(...filt.edges)));
+  return filtfilt(filt.secs, x, pad);
+}
+function describeFilter(filt){
+  if (!filt) return 'No filter (bypass)';
+  const n = { low: 'Low-pass', high: 'High-pass', band: 'Band-pass' }[filt.type];
+  return `${n} Butterworth, order ${filt.order}${filt.type === 'band' ? ` prototype (${2 * filt.order} poles)` : ''}, ${filt.edges.map(e => +e.toPrecision(5)).join('–')} Hz`;
+}
+
+function analogDemod(cfg, sig, r){
+  const N = r.length, fs = sig.fs, i = new Float64Array(N), q = new Float64Array(N);
+  for (let n = 0; n < N; n++){ i[n] = 2 * r[n] * sig.cosC[n]; q[n] = -2 * r[n] * sig.sinC[n]; }
+  let cutIQ;
+  if (cfg.mod === 'AM') cutIQ = Math.min(5 * cfg.fm, 0.8 * cfg.fc, 0.45 * fs);
+  else { const B = cfg.fdev + cfg.fm; cutIQ = Math.min(1.5 * B + cfg.fm, 2 * cfg.fc - 1.5 * B - cfg.fm, 0.45 * fs); cutIQ = Math.max(cutIQ, 1.05 * cfg.fm); }
+  const I = lowpass(i, cutIQ, fs, 4), Q = lowpass(q, cutIQ, fs, 4);
+  let mhat = new Float64Array(N);
+  if (cfg.mod === 'AM'){
+    for (let n = 0; n < N; n++) mhat[n] = (Math.hypot(I[n], Q[n]) / cfg.Ac - 1) / cfg.mu;
+  } else {
+    const un = new Float64Array(N); let prev = Math.atan2(Q[0], I[0]), off = 0; un[0] = prev;
+    for (let n = 1; n < N; n++){
+      const p = Math.atan2(Q[n], I[n]), dp = p - prev;
+      if (dp > Math.PI) off -= TAU; else if (dp < -Math.PI) off += TAU;
+      prev = p; un[n] = p + off;
+    }
+    const g = fs / TAU / cfg.fdev; // central difference: instantaneous frequency deviation / Δf
+    for (let n = 1; n < N - 1; n++) mhat[n] = (un[n + 1] - un[n - 1]) / 2 * g;
+    mhat[0] = (un[1] - un[0]) * g; mhat[N - 1] = (un[N - 1] - un[N - 2]) * g;
+  }
+  const cutMsg = Math.min(3 * cfg.fm, cutIQ);
+  mhat = lowpass(mhat, cutMsg, fs, 4);
+  const a0 = Math.floor(0.05 * N), a1 = Math.ceil(0.95 * N); let mean = 0; for (let n = a0; n < a1; n++) mean += mhat[n]; mean /= (a1 - a0); // DC block (edges excluded)
+  const rec = new Float64Array(N); for (let n = 0; n < N; n++) rec[n] = cfg.Am * (mhat[n] - mean);
+  return { rec, cutIQ, cutMsg, detector: cfg.mod === 'AM' ? 'Envelope detector (I/Q magnitude)' : 'Quadrature phase discriminator' };
+}
+
+function correlate(sig, r, j, len){
+  let ci = 0, cq = 0; const a = j * len, b = a + len;
+  for (let n = a; n < b; n++){ ci += r[n] * sig.cosC[n]; cq -= r[n] * sig.sinC[n]; }
+  return [2 * ci / len, 2 * cq / len];
+}
+function digitalDemod(cfg, sig, mod, rF, rN){
+  const k = sig.k, sps = sig.sps, ns = sig.bitsPad.length / k, M = cfg.qamM;
+  const scale = cfg.mod === 'QAM' ? Math.sqrt(mod.sym.Es) / cfg.Ac : 1 / cfg.Ac;
+  const rxBits = new Uint8Array(sig.bitsPad.length);
+  const soft = { x: new Float64Array(ns), y: new Float64Array(ns) }, softN = { x: new Float64Array(ns), y: new Float64Array(ns) };
+  const idealTx = { x: new Float64Array(ns), y: new Float64Array(ns) }, symOk = new Uint8Array(ns);
+  let mse = 0, symErr = 0;
+  for (let j = 0; j < ns; j++){
+    const [zi, zq] = correlate(sig, rF, j, sps), [ni, nq] = correlate(sig, rN, j, sps);
+    const x = zi * scale, y = zq * scale; soft.x[j] = x; soft.y[j] = y; softN.x[j] = ni * scale; softN.y[j] = nq * scale;
+    let ix, iy = 0, dec;
+    if (cfg.mod === 'ASK'){ const b = sig.bitsPad[j]; ix = b ? 1 : cfg.askLow; dec = [x > (1 + cfg.askLow) / 2 ? 1 : 0]; }
+    else if (cfg.mod === 'BPSK'){ const b = sig.bitsPad[j]; ix = b ? 1 : -1; dec = [x > 0 ? 1 : 0]; }
+    else { ix = mod.sym.I[j]; iy = mod.sym.Q[j]; const li = qamSlice(x, M), lq = qamSlice(y, M); dec = [...qamBits(li, M), ...qamBits(lq, M)]; }
+    idealTx.x[j] = ix; idealTx.y[j] = iy;
+    mse += (x - ix) ** 2 + (y - iy) ** 2;
+    let okSym = 1; for (let m = 0; m < k; m++){ rxBits[j * k + m] = dec[m]; if (dec[m] !== sig.bitsPad[j * k + m]) okSym = 0; }
+    symOk[j] = okSym; if (!okSym) symErr++;
+  }
+  mse /= ns;
+  const errIdx = []; for (let i = 0; i < sig.nb; i++) if (rxBits[i] !== sig.bits[i]) errIdx.push(i);
+  const rec = new Float64Array(sig.N); for (let n = 0; n < sig.N; n++) rec[n] = rxBits[Math.floor(n / sig.spb)];
+  let ideal;
+  if (cfg.mod === 'ASK') ideal = { x: [cfg.askLow, 1], y: [0, 0] };
+  else if (cfg.mod === 'BPSK') ideal = { x: [-1, 1], y: [0, 0] };
+  else { const L = M === 4 ? [-1, 1] : [-3, -1, 1, 3]; ideal = { x: [], y: [] }; for (const a of L) for (const b of L){ ideal.x.push(a); ideal.y.push(b); } }
+  const BER = errIdx.length / sig.nb;
+  return { rec, rxBits, errIdx, bitErr: errIdx.length, nb: sig.nb, BER, acc: (1 - BER) * 100, symErr, ns, SER: symErr / ns, mse, rmse: Math.sqrt(mse), soft, softN, idealTx, ideal, symOk, detector: 'Coherent correlator' };
+}
+function demodulate(cfg, sig, mod, rF, rN){ return sig.digital ? digitalDemod(cfg, sig, mod, rF, rN) : analogDemod(cfg, sig, rF); }
+
+function analogMetrics(m, r){
+  const N = m.length, a = Math.floor(0.05 * N), b = Math.ceil(0.95 * N), L = b - a;
+  let se = 0, sm = 0, mm = 0, mr = 0;
+  for (let i = a; i < b; i++){ const e = m[i] - r[i]; se += e * e; sm += m[i] * m[i]; mm += m[i]; mr += r[i]; }
+  mm /= L; mr /= L; let cov = 0, vm = 0, vr = 0;
+  for (let i = a; i < b; i++){ const dm = m[i] - mm, dr = r[i] - mr; cov += dm * dr; vm += dm * dm; vr += dr * dr; }
+  const mse = se / L;
+  return { mse, rmse: Math.sqrt(mse), snrOut: se > 0 ? 10 * Math.log10(sm / se) : Infinity, corr: vm > 0 && vr > 0 ? cov / Math.sqrt(vm * vr) : NaN };
+}
+
+function spectrum(x, fs, win){
+  const N = x.length, nfft = Math.max(1024, nextPow2(N));
+  const re = new Float64Array(nfft), im = new Float64Array(nfft);
+  let cg = 1;
+  if (win === 'hann'){ let s = 0; for (let n = 0; n < N; n++){ const w = 0.5 - 0.5 * Math.cos(TAU * n / (N - 1)); re[n] = x[n] * w; s += w; } cg = s / N; }
+  else re.set(x);
+  fft(re, im);
+  const half = nfft / 2, mag = new Float64Array(half + 1), f = new Float64Array(half + 1);
+  for (let k = 0; k <= half; k++){ mag[k] = Math.hypot(re[k], im[k]) / (N * cg) * (k > 0 && k < half ? 2 : 1); f[k] = k * fs / nfft; }
+  return { f, mag, df: fs / nfft, nfft };
+}
+function findPeaks(sp, count = 3){
+  const { mag, f, df } = sp; let mx = 0; for (const v of mag) if (v > mx) mx = v;
+  const cand = [];
+  for (let k = 0; k < mag.length; k++){
+    const l = k > 0 ? mag[k - 1] : -1, r = k < mag.length - 1 ? mag[k + 1] : -1;
+    if (mag[k] >= l && mag[k] > r && mag[k] > 0.05 * mx) cand.push(k);
+  }
+  cand.sort((a, b) => mag[b] - mag[a]);
+  const out = [];
+  for (const k of cand){ if (out.every(o => Math.abs(o.f - f[k]) > 3 * df)) out.push({ f: f[k], m: mag[k] }); if (out.length >= count) break; }
+  return out;
+}
+
+// One full run, used by the sweep and the comparison
+function runOnce(cfg){
+  const sig = buildSignal(cfg), mod = modulate(cfg, sig), nz = addNoise(cfg, sig, mod);
+  const filt = designFilter(cfg), rF = applyFilter(filt, nz.noisy, cfg.fs);
+  const dm = demodulate(cfg, sig, mod, rF, nz.noisy);
+  const out = { mod: cfg.mod, snrSet: cfg.snr, snrMeas: nz.snrMeas, ebn0Meas: nz.ebn0Meas, spb: sig.spb };
+  if (sig.digital) Object.assign(out, { BER: dm.BER, acc: dm.acc, SER: dm.SER, mse: dm.mse, rmse: dm.rmse, bitErr: dm.bitErr, nb: dm.nb, snrOut: NaN, corr: NaN });
+  else Object.assign(out, analogMetrics(sig.msg, dm.rec), { BER: NaN, acc: NaN, SER: NaN });
+  return out;
+}
+
+/* ================= Plotting ================= */
+function niceNum(range, round){
+  const e = Math.floor(Math.log10(range)), f = range / Math.pow(10, e);
+  const nf = round ? (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) : (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10);
+  return nf * Math.pow(10, e);
+}
+function ticks(min, max, n){
+  const step = niceNum((max - min) / Math.max(2, n), true);
+  if (!(step > 0) || !isFinite(step)) return { ticks: [min, max], step: max - min };
+  const out = []; for (let v = Math.ceil(min / step) * step; v <= max + step * 1e-9 && out.length < 50; v += step) out.push(Math.abs(v) < step * 1e-9 ? 0 : v);
+  return { ticks: out, step };
+}
+function fmtTick(v, step){
+  if (v === 0) return '0';
+  const a = Math.abs(v); if (a >= 1e5 || a < 1e-4) return v.toExponential(0).replace('e+', 'e');
+  const d = Math.max(0, Math.min(6, -Math.floor(Math.log10(step) + 1e-9)));
+  return v.toFixed(d);
+}
+function lowerBound(a, v){ let lo = 0, hi = a.length; while (lo < hi){ const m = (lo + hi) >> 1; if (a[m] < v) lo = m + 1; else hi = m; } return lo; }
+
+const plotOpts = new Map();
+function setPlot(id, opts){ plotOpts.set(id, opts); const c = document.getElementById(id); if (c && c.offsetParent !== null) drawPlot(c, opts); }
+function redrawVisible(){ for (const [id, o] of plotOpts){ const c = document.getElementById(id); if (c && c.offsetParent !== null) drawPlot(c, o); } }
+
+function drawPlot(cv, o){
+  const W = cv.clientWidth, H = cv.clientHeight; if (!W || !H) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+  const st = getComputedStyle(document.documentElement);
+  const col = v => (typeof v === 'string' && v.startsWith('--')) ? st.getPropertyValue(v).trim() : v;
+  const txt = col('--scr-text'), grid = col('--scr-grid'), axis = col('--scr-axis');
+  const small = '12px "Barlow Condensed", "Arial Narrow", sans-serif';
+  if (o.empty){ ctx.fillStyle = txt; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '14px Barlow, system-ui, sans-serif'; ctx.fillText(o.empty, W / 2, H / 2); return; }
+  const m = { l: 54, r: 12, t: 12, b: 36 }, pw = W - m.l - m.r, ph = H - m.t - m.b; if (pw < 30 || ph < 30) return;
+  const series = o.series || [];
+  let x0, x1;
+  if (o.xlim){ [x0, x1] = o.xlim; }
+  else { x0 = Infinity; x1 = -Infinity; for (const s of series){ if (s.sx) for (const v of s.sx){ if (v < x0) x0 = v; if (v > x1) x1 = v; } else if (s.x && s.x.length){ x0 = Math.min(x0, s.x[0]); x1 = Math.max(x1, s.x[s.x.length - 1]); } } }
+  if (!isFinite(x0) || !isFinite(x1)){ x0 = 0; x1 = 1; } if (!(x1 > x0)){ x0 -= 1; x1 += 1; }
+  let y0, y1;
+  if (o.ylim){ [y0, y1] = o.ylim; }
+  else {
+    y0 = Infinity; y1 = -Infinity;
+    const acc = v => { if (!isFinite(v) || (o.ylog && v <= 0)) return; if (v < y0) y0 = v; if (v > y1) y1 = v; };
+    for (const s of series){
+      if (s.sy) for (const v of s.sy) acc(v);
+      else if (s.x){ const a = Math.max(0, lowerBound(s.x, x0) - 1), b = Math.min(s.y.length, lowerBound(s.x, x1) + 1); for (let i = a; i < b; i++) acc(s.y[i]); }
+    }
+    if (!isFinite(y0)){ y0 = o.ylog ? 1e-4 : -1; y1 = o.ylog ? 1 : 1; }
+    if (o.ylog){ y0 = Math.pow(10, Math.floor(Math.log10(y0))); y1 = Math.pow(10, Math.ceil(Math.log10(y1))); if (y1 <= y0) y1 = y0 * 10; }
+    else { if (y1 === y0){ y0 -= 1; y1 += 1; } const p = (y1 - y0) * 0.08; y0 -= p; y1 += p; }
+  }
+  if (o.equal){ const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, s = Math.max((x1 - x0) / pw, (y1 - y0) / ph); x0 = cx - s * pw / 2; x1 = cx + s * pw / 2; y0 = cy - s * ph / 2; y1 = cy + s * ph / 2; }
+  const X = v => m.l + (v - x0) / (x1 - x0) * pw;
+  const ly0 = o.ylog ? Math.log10(y0) : 0, ly1 = o.ylog ? Math.log10(y1) : 1;
+  const Y = o.ylog ? v => m.t + ph - (Math.log10(v) - ly0) / (ly1 - ly0) * ph : v => m.t + ph - (v - y0) / (y1 - y0) * ph;
+  ctx.font = small; ctx.lineWidth = 1; ctx.strokeStyle = grid; ctx.fillStyle = txt;
+  const xt = ticks(x0, x1, Math.max(3, Math.floor(pw / 70)));
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (const v of xt.ticks){ const px = Math.round(X(v)) + 0.5; ctx.beginPath(); ctx.moveTo(px, m.t); ctx.lineTo(px, m.t + ph); ctx.stroke(); ctx.fillText(fmtTick(v, xt.step), px, m.t + ph + 4); }
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  if (o.ylog){
+    const e0 = Math.round(ly0), e1 = Math.round(ly1), stepE = Math.max(1, Math.ceil((e1 - e0) / Math.max(2, Math.floor(ph / 32))));
+    for (let e = e0; e <= e1; e += stepE){ const py = Math.round(Y(Math.pow(10, e))) + 0.5; ctx.beginPath(); ctx.moveTo(m.l, py); ctx.lineTo(m.l + pw, py); ctx.stroke(); ctx.fillText('10' + sup(e), m.l - 6, py); }
+  } else {
+    const yt = ticks(y0, y1, Math.max(3, Math.floor(ph / 34)));
+    for (const v of yt.ticks){ const py = Math.round(Y(v)) + 0.5; ctx.beginPath(); ctx.moveTo(m.l, py); ctx.lineTo(m.l + pw, py); ctx.stroke(); ctx.fillText(fmtTick(v, yt.step), m.l - 6, py); }
+  }
+  ctx.strokeStyle = axis; ctx.strokeRect(m.l + 0.5, m.t + 0.5, pw - 1, ph - 1);
+  ctx.save(); ctx.beginPath(); ctx.rect(m.l, m.t, pw, ph); ctx.clip();
+  for (const b of o.bands || []){ ctx.fillStyle = col(b.color); const a = X(b.x0), c = X(b.x1); ctx.fillRect(a, m.t, Math.max(1, c - a), ph); }
+  for (const v of o.vlines || []){ ctx.strokeStyle = col(v.color); ctx.setLineDash([4, 4]); ctx.beginPath(); const px = Math.round(X(v.x)) + 0.5; ctx.moveTo(px, m.t); ctx.lineTo(px, m.t + ph); ctx.stroke(); ctx.setLineDash([]); }
+  for (const s of series){
+    const c = col(s.color);
+    if (s.sx){
+      const r = s.size || 3; ctx.fillStyle = c; ctx.strokeStyle = c; ctx.lineWidth = 1.6;
+      for (let i = 0; i < s.sx.length; i++){ const px = X(s.sx[i]), py = Y(s.sy[i]); if (s.ring){ ctx.beginPath(); ctx.arc(px, py, r, 0, TAU); ctx.stroke(); } else ctx.fillRect(px - r / 2, py - r / 2, r, r); }
+      continue;
+    }
+    ctx.strokeStyle = c; ctx.lineWidth = s.width || 1.4; ctx.setLineDash(s.dash || []); ctx.lineJoin = 'round';
+    const xs = s.x, ys = s.y, n = ys.length; if (!n) continue;
+    const a = Math.max(0, lowerBound(xs, x0) - 1), b = Math.min(n - 1, lowerBound(xs, x1));
+    const bad = v => !isFinite(v) || (o.ylog && v <= 0);
+    ctx.beginPath(); let pen = false;
+    if (b - a <= pw * 2){
+      for (let i = a; i <= b; i++){ const v = ys[i]; if (bad(v)){ pen = false; continue; } const px = X(xs[i]), py = Y(v); if (pen) ctx.lineTo(px, py); else { ctx.moveTo(px, py); pen = true; } }
+    } else {
+      let cc = null, fy, mn, mx, lyv;
+      const flush = () => { if (cc === null) return; if (pen) ctx.lineTo(cc, fy); else { ctx.moveTo(cc, fy); pen = true; } ctx.lineTo(cc, mn); ctx.lineTo(cc, mx); ctx.lineTo(cc, lyv); };
+      for (let i = a; i <= b; i++){
+        const v = ys[i]; if (bad(v)){ flush(); cc = null; pen = false; continue; }
+        const px = Math.round(X(xs[i])), py = Y(v);
+        if (px !== cc){ flush(); cc = px; fy = mn = mx = lyv = py; } else { if (py < mn) mn = py; if (py > mx) mx = py; lyv = py; }
+      }
+      flush();
+    }
+    ctx.stroke(); ctx.setLineDash([]);
+    if (s.marker){ ctx.fillStyle = c; for (let i = a; i <= b; i++){ if (bad(ys[i])) continue; ctx.beginPath(); ctx.arc(X(xs[i]), Y(ys[i]), 3, 0, TAU); ctx.fill(); } }
+  }
+  ctx.restore();
+  ctx.fillStyle = txt; ctx.font = '12px Barlow, system-ui, sans-serif';
+  if (o.xlabel){ ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText(o.xlabel, m.l + pw / 2, H - 2); }
+  if (o.ylabel){ ctx.save(); ctx.translate(3, m.t + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(o.ylabel, 0, 0); ctx.restore(); }
+  const leg = series.filter(s => s.name);
+  if (leg.length && o.legend !== false){
+    ctx.font = small; const rowH = 16, sw = 16;
+    const wmax = Math.max(...leg.map(s => ctx.measureText(s.name).width));
+    const bw = wmax + sw + 18, bh = leg.length * rowH + 8, bx = m.l + pw - bw - 6, by = m.t + 6;
+    ctx.fillStyle = col('--scr-legend'); ctx.fillRect(bx, by, bw, bh); ctx.strokeStyle = axis; ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
+    leg.forEach((s, i) => {
+      const cy = by + 4 + i * rowH + rowH / 2, c = col(s.color);
+      ctx.strokeStyle = c; ctx.fillStyle = c; ctx.lineWidth = 2;
+      if (s.sx){ if (s.ring){ ctx.beginPath(); ctx.arc(bx + 6 + sw / 2, cy, 4, 0, TAU); ctx.stroke(); } else ctx.fillRect(bx + 6 + sw / 2 - 3, cy - 3, 6, 6); }
+      else { ctx.setLineDash(s.dash || []); ctx.beginPath(); ctx.moveTo(bx + 6, cy); ctx.lineTo(bx + 6 + sw, cy); ctx.stroke(); ctx.setLineDash([]); }
+      ctx.fillStyle = txt; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(s.name, bx + sw + 12, cy);
+    });
+  }
+}
+const ro = new ResizeObserver(entries => { for (const e of entries){ const c = e.target.querySelector('canvas'); const o = plotOpts.get(c.id); if (o) drawPlot(c, o); } });
+$$('.scope').forEach(s => ro.observe(s));
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redrawVisible);
+
+/* ================= App state and stages ================= */
+let S = null, stale = false, lastMsgs = { errors: [], warnings: [] };
+const STAGE_ORDER = ['gen', 'mod', 'noise', 'fft', 'filt', 'demod'];
+const PREREQ = { gen: null, mod: 'gen', noise: 'mod', fft: 'noise', filt: 'noise', demod: 'filt' };
+function log(stage, text){ if (S) S.log.push({ stage, text }); }
+
+const STAGES = {
+  gen(){
+    const cfg = readConfig(), v = validate(cfg); showMessages(v);
+    if (v.errors.length){ return false; }
+    S = { cfg, done: {}, log: [], spec: {} }; stale = false;
+    S.sig = buildSignal(cfg); S.done.gen = true;
+    const g = S.sig;
+    if (g.digital) log('Generate signal', `${g.nb} bits (${cfg.dataSrc === 'custom' ? 'custom sequence' : 'random, seed ' + cfg.dataSeed}), ${g.spb} samples per bit, ${fmt(g.Rb)} bit/s, ${fmt(cfg.fc / g.Rs, 3)} carrier cycles per symbol. ${g.N.toLocaleString()} samples at ${fmtHz(cfg.fs)}. Carrier ${fmtHz(cfg.fc)}, amplitude ${cfg.Ac}.`);
+    else log('Generate signal', `Message m(t) = ${cfg.Am}·sin(2π·${cfg.fm}·t), ${g.N.toLocaleString()} samples at ${fmtHz(cfg.fs)} (${fmt(g.N / cfg.fs)} s). Carrier c(t) = ${cfg.Ac}·cos(2π·${cfg.fc}·t).`);
+    return true;
+  },
+  mod(){
+    const c = S.cfg; S.mod = modulate(c, S.sig); S.done.mod = true;
+    const extra = ({ AM: () => `μ = ${c.mu}`, FM: () => `Δf = ${c.fdev} Hz, β = ${fmt(c.fdev / c.fm, 3)}, Carson bandwidth ${fmt(2 * (c.fdev + c.fm))} Hz`, ASK: () => `bit 1 → ${c.Ac}, bit 0 → ${c.Ac * c.askLow}`, BPSK: () => 'bit 1 → 0°, bit 0 → 180°', QAM: () => `${c.qamM}-QAM, Gray coded, ${S.sig.k} bits per symbol, ${S.sig.bitsPad.length / S.sig.k} symbols` })[c.mod]();
+    log('Modulate', `${c.mod} applied (${extra}). Average signal power ${fmt(S.mod.Ps)}.`);
+    return true;
+  },
+  noise(){
+    const c = S.cfg; S.noise = addNoise(c, S.sig, S.mod); S.done.noise = true;
+    const n = S.noise;
+    const target = c.noiseBy === 'sigma' ? `σ = ${c.sigma}` : `target ${c.snr} dB ${c.snrRef === 'ebn0' && S.sig.digital ? 'Eb/N0' : 'sample SNR'}`;
+    log('Add noise', `AWGN (${target}, seed ${c.noiseSeed}). Noise σ = ${fmt(n.sigma)}; measured sample SNR ${fmt(n.snrMeas, 4)} dB${n.ebn0Meas !== null ? `, equivalent Eb/N0 ${fmt(n.ebn0Meas, 4)} dB` : ''}.`);
+    $('#noiseReadout').textContent = `Noise σ applied: ${fmt(n.sigma)}. Measured SNR ${fmt(n.snrMeas, 4)} dB.`;
+    return true;
+  },
+  fft(){
+    S.done.fft = true;
+    const sp = spectrum(S.noise.noisy, S.cfg.fs, $('#specWin').value), pk = findPeaks(sp);
+    log('Analyze FFT', `FFT size ${sp.nfft}, resolution ${fmt(sp.df)} Hz, fs = ${fmtHz(S.cfg.fs)}. Strongest components of the noisy signal: ${pk.map(p => fmtHz(p.f)).join(', ') || 'none found'}.`);
+    return true;
+  },
+  filt(){
+    const c = S.cfg; S.filt = designFilter(c); S.filtered = applyFilter(S.filt, S.noise.noisy, c.fs); S.done.filt = true;
+    const s = S.mod.s, f = S.filtered; let e = 0; for (let i = 0; i < s.length; i++) e += (f[i] - s[i]) ** 2; e /= s.length;
+    S.snrFilt = e > 0 ? 10 * Math.log10(S.mod.Ps / e) : Infinity;
+    log('Apply filter', `${describeFilter(S.filt)}, zero-phase. SNR against the clean modulated signal: ${fmt(S.noise.snrMeas, 4)} dB before, ${fmt(S.snrFilt, 4)} dB after.`);
+    return true;
+  },
+  demod(){
+    const c = S.cfg; S.demod = demodulate(c, S.sig, S.mod, S.filtered, S.noise.noisy); S.done.demod = true;
+    const d = S.demod;
+    if (S.sig.digital) log('Demodulate', `${d.detector} over ${S.sig.sps} samples per symbol. ${d.bitErr} of ${d.nb} bits in error (BER ${fmt(d.BER)}), ${d.symErr} of ${d.ns} symbols in error, soft-symbol MSE ${fmt(d.mse)}.`);
+    else { S.am = analogMetrics(S.sig.msg, d.rec); log('Demodulate', `${d.detector}: I/Q low-pass ${fmt(d.cutIQ)} Hz, message low-pass ${fmt(d.cutMsg)} Hz, DC removed. MSE ${fmt(S.am.mse)}, correlation ${fmt(S.am.corr)}. Metrics skip the first and last 5% of samples to avoid filter edges.`); }
+    return true;
+  }
+};
+
+function runStage(name, quiet){
+  try {
+    if (name !== 'gen' && (!S || stale)){ if (!STAGES.gen()) { refreshUI(); return false; } }
+    const pre = PREREQ[name]; if (pre && !S.done[pre]) return false;
+    // Re-running an earlier stage clears everything after it
+    const idx = STAGE_ORDER.indexOf(name);
+    if (S) for (const later of STAGE_ORDER.slice(idx + 1)) if (!(name === 'fft' && later !== 'fft')) delete S.done[later];
+    const ok = STAGES[name]();
+    if (!quiet) refreshUI();
+    return ok;
+  } catch (e){
+    console.error(e); showMessages({ errors: [`The ${name} stage failed: ${e.message}`], warnings: [] }); refreshUI(); return false;
+  }
+}
+function runAll(){
+  if (!runStage('gen', true)){ refreshUI(); return; }
+  for (const s of ['mod', 'noise', 'fft', 'filt', 'demod']) if (!runStage(s, true)) break;
+  refreshUI();
+}
+
+/* ================= Rendering ================= */
+function showMessages(v){
+  lastMsgs = v; const el = $('#msgs'); el.innerHTML = '';
+  for (const e of v.errors){ const d = document.createElement('div'); d.className = 'msg error'; d.innerHTML = '<strong>Fix before running</strong>'; d.append(e); el.append(d); }
+  for (const w of v.warnings){ const d = document.createElement('div'); d.className = 'msg warn'; d.innerHTML = '<strong>Check</strong>'; d.append(w); el.append(d); }
+}
+function refreshUI(){
+  $$('.stage').forEach(b => {
+    const st = b.dataset.stage, lamp = b.querySelector('.lamp'), done = S && S.done[st];
+    lamp.className = 'lamp' + (done ? (stale ? ' stale' : ' on') : '');
+    const pre = PREREQ[st]; b.disabled = !!pre && !(S && !stale && S.done[pre]) && st !== 'gen';
+  });
+  const lamp = $('#statusLamp'), txt = $('#statusText');
+  if (!S){ lamp.className = 'lamp'; txt.textContent = lastMsgs.errors.length ? 'Settings need attention before the pipeline can run.' : 'Ready. Pick a modulation and run the pipeline.'; }
+  else if (stale){ lamp.className = 'lamp stale'; txt.textContent = 'Settings changed. Run the pipeline again to update the results.'; }
+  else if (S.done.demod){ lamp.className = 'lamp on'; const c = S.cfg; txt.textContent = `${c.mod} pipeline complete at ${c.noiseBy === 'sigma' ? 'σ = ' + c.sigma : c.snr + ' dB ' + (c.snrRef === 'ebn0' && S.sig.digital ? 'Eb/N0' : 'SNR')}.`; }
+  else { lamp.className = 'lamp on'; const last = [...STAGE_ORDER].reverse().find(s => S.done[s]); txt.textContent = `${S.cfg.mod}: ${({ gen: 'signal generated', mod: 'modulated', noise: 'noise added', fft: 'spectrum analyzed', filt: 'filtered' })[last]}. Continue down the chain.`; }
+  renderMetrics(); renderTime(); renderSpectrum(); renderConst(); renderLog();
+}
+
+function renderMetrics(){
+  const el = $('#metrics'); const tiles = [];
+  const dig = S ? S.sig.digital : !MODS[currentMod].analog;
+  const n = S && S.done.noise ? S.noise : null, d = S && S.done.demod ? S.demod : null;
+  tiles.push(['Channel SNR', n ? fmt(n.snrMeas, 4) + ' dB' : '—']);
+  tiles.push(['SNR after filter', S && S.done.filt ? fmt(S.snrFilt, 4) + ' dB' : '—']);
+  if (dig){
+    tiles.push(['Eb/N0', n && n.ebn0Meas !== null ? fmt(n.ebn0Meas, 4) + ' dB' : '—']);
+    tiles.push(['Bit error rate', d ? fmt(d.BER) : '—']);
+    tiles.push(['Bit accuracy', d ? fmt(d.acc, 5) + ' %' : '—']);
+    tiles.push(['Bit errors', d ? `${d.bitErr} / ${d.nb}` : '—']);
+    tiles.push(['Symbol error rate', d ? fmt(d.SER) : '—']);
+    tiles.push(['Soft-symbol MSE', d ? fmt(d.mse) : '—']);
+  } else {
+    const a = S && S.am && d ? S.am : null;
+    tiles.push(['MSE', a ? fmt(a.mse) : '—'], ['RMSE', a ? fmt(a.rmse) : '—'], ['Output SNR', a ? fmt(a.snrOut, 4) + ' dB' : '—'], ['Correlation', a ? fmt(a.corr, 5) : '—']);
+  }
+  el.innerHTML = tiles.map(([k, v]) => `<div class="metric"><dt>${k}</dt><dd>${v}</dd></div>`).join('');
+}
+
+function timeWindow(sig){
+  const T = sig.N / sig.fs * 1000, frac = parseFloat($('#win').value), span = T * frac, st = (T - span) * (+$('#winStart').value / 100);
+  return [st, st + span];
+}
+function renderTime(){
+  const ids = ['p-msg', 'p-car', 'p-mod', 'p-noisy', 'p-filt', 'p-rec'];
+  const mod = S ? S.cfg.mod : currentMod, dig = !MODS[mod].analog;
+  $('#winStart').disabled = $('#win').value === '1';
+  $('#cap-msg').textContent = dig ? 'Binary input sequence' : 'Message signal m(t)';
+  $('#cap-car').textContent = 'Carrier c(t) = Ac·cos(2πfc·t)';
+  $('#cap-mod').textContent = `${mod} modulated signal s(t)`;
+  $('#cap-noisy').textContent = `Noisy ${mod} signal r(t) = s(t) + n(t)`;
+  $('#cap-filt').textContent = 'Filtered signal';
+  $('#cap-rec').textContent = dig ? 'Recovered bits vs transmitted' : 'Recovered message vs original';
+  const bo = $('#bitsOut');
+  if (!S){ ids.forEach(id => setPlot(id, { empty: 'Run the pipeline to see this signal' })); bo.hidden = true; return; }
+  const g = S.sig, x = g.tms, xl = timeWindow(g), base = { xlim: xl, xlabel: 'Time (ms)', ylabel: 'Amplitude' };
+  setPlot('p-msg', dig ? { ...base, ylabel: 'Bit value', ylim: [-0.25, 1.25], series: [{ x, y: g.msg, color: '--ch1', width: 1.8 }] } : { ...base, series: [{ x, y: g.msg, color: '--ch1', width: 1.6 }] });
+  setPlot('p-car', { ...base, series: [{ x, y: g.carrier, color: '--ch2' }] });
+  setPlot('p-mod', S.done.mod ? { ...base, series: [{ x, y: S.mod.s, color: '--ch3' }] } : { empty: 'Press Modulate' });
+  setPlot('p-noisy', S.done.noise ? { ...base, series: [{ x, y: S.noise.noisy, color: '--noisy', width: 1 }] } : { empty: 'Press Add noise' });
+  setPlot('p-filt', S.done.filt ? { ...base, series: [{ x, y: S.filtered, color: '--ch4' }] } : { empty: 'Press Apply filter' });
+  if (S.done.demod){
+    const d = S.demod;
+    if (dig){
+      const bands = d.errIdx.map(i => ({ x0: i * g.spb / g.fs * 1000, x1: (i + 1) * g.spb / g.fs * 1000, color: '--err-band' }));
+      setPlot('p-rec', { ...base, ylabel: 'Bit value', ylim: [-0.25, 1.35], bands, series: [{ x, y: g.msg, color: '--ch1', name: 'Transmitted', width: 1.8 }, { x, y: d.rec, color: '--ch5', name: 'Recovered', dash: [5, 3], width: 1.8 }] });
+      const lim = Math.min(g.nb, 256), errs = new Set(d.errIdx);
+      const tx = [...g.bits.subarray(0, lim)].join(''), rx = [...d.rxBits.subarray(0, lim)].map((b, i) => errs.has(i) ? `<mark>${b}</mark>` : b).join('');
+      bo.innerHTML = `<div class="row"><span>Transmitted</span><code>${tx}${g.nb > lim ? '…' : ''}</code></div><div class="row"><span>Received</span><code>${rx}${g.nb > lim ? '…' : ''}</code></div><p class="note">${d.bitErr ? `Highlighted bits are errors (${d.bitErr} of ${d.nb}).` : `All ${d.nb} bits recovered correctly.`}${g.nb > lim ? ` Showing the first ${lim} bits.` : ''}</p>`;
+      bo.hidden = false;
+    } else {
+      setPlot('p-rec', { ...base, series: [{ x, y: g.msg, color: '--ch1', name: 'Original', width: 1.6 }, { x, y: d.rec, color: '--ch5', name: 'Recovered', width: 1.6, dash: [6, 3] }] });
+      bo.hidden = true;
+    }
+  } else { setPlot('p-rec', { empty: 'Press Demodulate' }); bo.hidden = true; }
+}
+
+const SPEC_SIGNALS = [
+  { key: 'msg', name: 'Message', color: '--ch1', get: () => S.sig.msg },
+  { key: 'mod', name: 'Modulated', color: '--ch3', get: () => S.done.mod ? S.mod.s : null },
+  { key: 'noisy', name: 'Noisy', color: '--noisy', get: () => S.done.noise ? S.noise.noisy : null },
+  { key: 'filt', name: 'Filtered', color: '--ch4', get: () => S.done.filt ? S.filtered : null },
+  { key: 'rec', name: 'Recovered', color: '--ch5', get: () => S.done.demod ? S.demod.rec : null }
+];
+(function initSpecChecks(){
+  $('#specChecks').innerHTML = SPEC_SIGNALS.map(s => `<label><input type="checkbox" data-spec="${s.key}" ${['mod', 'noisy', 'filt'].includes(s.key) ? 'checked' : ''}><span class="sw" style="background:var(${s.color})"></span>${s.name}</label>`).join('');
+})();
+function renderSpectrum(){
+  const peaksEl = $('#peaks');
+  if (!S){ setPlot('p-spec', { empty: 'Run the pipeline or press Analyze FFT' }); setPlot('p-fresp', { empty: 'Configure a filter and run the pipeline' }); peaksEl.innerHTML = '<tbody><tr><td class="empty">No spectrum yet.</td></tr></tbody>'; $('#specInfo').textContent = ''; $('#frespCap').textContent = ''; return; }
+  const c = S.cfg, win = $('#specWin').value, dB = $('#specScale').value === 'db';
+  let fmaxAuto;
+  if (c.mod === 'AM') fmaxAuto = c.fc + 8 * c.fm; else if (c.mod === 'FM') fmaxAuto = c.fc + 2 * (c.fdev + c.fm); else fmaxAuto = c.fc + 6 * S.sig.Rs;
+  fmaxAuto = Math.min(c.fs / 2, fmaxAuto * 1.3);
+  const userMax = parseFloat($('#specMax').value), fmax = userMax > 0 ? Math.min(userMax, c.fs / 2) : fmaxAuto;
+  const shown = new Set($$('#specChecks input:checked').map(i => i.dataset.spec));
+  const series = [], rows = [];
+  let info = null;
+  for (const s of SPEC_SIGNALS){
+    const x = s.get(); if (!x) continue;
+    const ck = s.key + ':' + win; if (!S.spec[ck]) S.spec[ck] = spectrum(x, c.fs, win);
+    const sp = S.spec[ck]; info = sp;
+    rows.push({ name: s.name, pk: findPeaks(sp) });
+    if (!shown.has(s.key)) continue;
+    const y = dB ? Float64Array.from(sp.mag, v => 20 * Math.log10(Math.max(v, 1e-6))) : sp.mag;
+    series.push({ x: sp.f, y, color: s.color, name: s.name, width: s.key === 'noisy' ? 1 : 1.5 });
+  }
+  if (!series.length) setPlot('p-spec', { empty: S.done.noise ? 'Select at least one signal above' : 'Add noise to compare spectra' });
+  else {
+    let ylim; if (dB){ let mx = -200; for (const s of series){ const b = lowerBound(s.x, fmax); for (let i = 0; i <= b && i < s.y.length; i++) if (s.y[i] > mx) mx = s.y[i]; } ylim = [Math.ceil(mx / 10) * 10 - 90, Math.ceil(mx / 10) * 10 + 5]; }
+    const vlines = S.filt && S.done.filt ? S.filt.edges.map(e => ({ x: e, color: '--ch4' })) : [];
+    setPlot('p-spec', { series, xlim: [0, fmax], ylim, xlabel: 'Frequency (Hz)', ylabel: dB ? 'Magnitude (dB)' : 'Magnitude', vlines });
+  }
+  $('#specInfo').textContent = info ? `fs = ${fmtHz(c.fs)}, ${info.nfft}-point FFT, ${fmt(info.df)} Hz per bin, ${win === 'hann' ? 'Hann' : 'rectangular'} window` : '';
+  peaksEl.innerHTML = rows.length ? `<thead><tr><th>Signal</th><th>Peak 1</th><th>Peak 2</th><th>Peak 3</th></tr></thead><tbody>${rows.map(r => `<tr><td>${r.name}</td>${[0, 1, 2].map(i => `<td>${r.pk[i] ? `${fmtHz(r.pk[i].f)} <span style="color:var(--muted)">(${fmt(r.pk[i].m, 3)})</span>` : '—'}</td>`).join('')}</tr>`).join('')}</tbody>` : '<tbody><tr><td class="empty">No spectrum yet.</td></tr></tbody>';
+  // Filter response
+  const filt = designFilterSafe(c);
+  if (!filt){ setPlot('p-fresp', { empty: c.fType === 'none' ? 'Filter is bypassed' : 'Filter settings are invalid' }); $('#frespCap').textContent = ''; }
+  else {
+    const K = 600, f = new Float64Array(K), y = new Float64Array(K);
+    for (let i = 0; i < K; i++){ f[i] = fmax * i / (K - 1); y[i] = 20 * Math.log10(Math.max(sosMag2(filt.secs, f[i], c.fs), 1e-8)); }
+    setPlot('p-fresp', { series: [{ x: f, y, color: '--ch4', width: 1.8 }], xlim: [0, fmax], ylim: [-80, 6], xlabel: 'Frequency (Hz)', ylabel: 'Gain (dB)', vlines: [{ x: c.fc, color: '--ch2' }] });
+    $('#frespCap').textContent = `${describeFilter(filt)}. Zero-phase response |H(f)|²; the dashed line marks the carrier.`;
+  }
+}
+function designFilterSafe(c){ try { if (c.fType === 'none') return null; const v = validate(c); if (v.errors.some(e => /filter|cutoff|Band-pass/i.test(e))) return null; return designFilter(c); } catch { return null; } }
+
+function renderConst(){
+  const note = $('#constNote'), tab = $('#symtab');
+  const mod = S ? S.cfg.mod : currentMod;
+  if (MODS[mod].analog){
+    note.textContent = 'Constellations apply to ASK, BPSK and QAM. Select one of those and run the pipeline.';
+    setPlot('p-cn', { empty: 'Digital modulation only' }); setPlot('p-cr', { empty: 'Digital modulation only' });
+    tab.innerHTML = '<tbody><tr><td class="empty">No symbols for analog modulation.</td></tr></tbody>'; return;
+  }
+  if (!S || !S.done.demod){
+    note.textContent = 'Run the pipeline through Demodulate to see the constellation.';
+    setPlot('p-cn', { empty: 'Waiting for demodulation' }); setPlot('p-cr', { empty: 'Waiting for demodulation' });
+    tab.innerHTML = '<tbody><tr><td class="empty">No symbols yet.</td></tr></tbody>'; return;
+  }
+  const d = S.demod, c = S.cfg, ns = d.ns;
+  note.textContent = `Correlator outputs for each of the ${ns} symbols, scaled so ideal points sit on the ${c.mod === 'QAM' ? `${c.qamM}-QAM grid (±1${c.qamM === 16 ? ', ±3' : ''})` : 'unit amplitude'}. ${ns < 40 && c.dataSrc === 'custom' ? 'Switch Data to random bits for a denser cloud.' : ''}`;
+  const ideal = { sx: d.ideal.x, sy: d.ideal.y, color: '--ideal', ring: true, size: 7, name: 'Ideal' };
+  const lim = (c.mod === 'QAM' && c.qamM === 16 ? 3 : 1) * 1.75;
+  const common = { xlim: [-lim, lim], ylim: [-lim, lim], equal: true, xlabel: 'In-phase (I)', ylabel: 'Quadrature (Q)' };
+  const pts = Math.max(2, Math.min(4, 600 / Math.sqrt(ns)));
+  setPlot('p-cn', { ...common, series: [{ sx: d.softN.x, sy: d.softN.y, color: '--noisy', size: pts, name: 'Received' }, ideal] });
+  const okx = [], oky = [], bx = [], by = [];
+  for (let j = 0; j < ns; j++){ if (d.symOk[j]){ okx.push(d.soft.x[j]); oky.push(d.soft.y[j]); } else { bx.push(d.soft.x[j]); by.push(d.soft.y[j]); } }
+  setPlot('p-cr', { ...common, series: [{ sx: okx, sy: oky, color: '--ch4', size: pts, name: 'Correct' }, { sx: bx, sy: by, color: '--err', size: pts + 1, name: 'Error' }, ideal] });
+  const k = S.sig.k, lim2 = Math.min(ns, 24);
+  let h = `<thead><tr><th>Symbol</th><th>Bits</th><th>Ideal (I, Q)</th><th>Received (I, Q)</th><th>Decided bits</th><th>Result</th></tr></thead><tbody>`;
+  for (let j = 0; j < lim2; j++){
+    const tb = [...S.sig.bitsPad.subarray(j * k, (j + 1) * k)].join(''), rb = [...d.rxBits.subarray(j * k, (j + 1) * k)].join('');
+    h += `<tr><td>${j + 1}</td><td>${tb}</td><td>(${fmt(d.idealTx.x[j], 3)}, ${fmt(d.idealTx.y[j], 3)})</td><td>(${d.soft.x[j].toFixed(3)}, ${d.soft.y[j].toFixed(3)})</td><td>${rb}</td><td style="color:var(${d.symOk[j] ? '--ok' : '--err'})">${d.symOk[j] ? 'Correct' : 'Error'}</td></tr>`;
+  }
+  h += '</tbody>'; tab.innerHTML = h + (ns > lim2 ? `<caption style="caption-side:bottom;text-align:left;padding:6px 10px;color:var(--muted);font-size:.85rem">First ${lim2} of ${ns} symbols.</caption>` : '');
+}
+
+function renderLog(){
+  const el = $('#log');
+  if (!S || !S.log.length){ el.innerHTML = '<li class="note">Each stage writes what it did here.</li>'; return; }
+  el.innerHTML = ''; for (const e of S.log){ const li = document.createElement('li'); const b = document.createElement('b'); b.textContent = e.stage + '. '; li.append(b, e.text); el.append(li); }
+}
+
+/* ================= SNR sweep ================= */
+(function initSweepMods(){ $('#swMods').innerHTML = MOD_KEYS.map(k => `<label><input type="checkbox" data-swmod="${k}" checked><span class="sw" style="background:var(${MODS[k].color})"></span>${k}</label>`).join(''); })();
+const tick = () => new Promise(r => setTimeout(r, 0));
+let sweepBusy = false;
+async function runSweep(){
+  if (sweepBusy) return;
+  const base = readConfig(), from = numVal('swFrom'), to = numVal('swTo'), step = numVal('swStep'), axis = $('#swAxis').value, nbits = numVal('swBits');
+  const prog = $('#swProgress');
+  const errs = [];
+  if (![from, to, step].every(Number.isFinite) || step <= 0 || to < from) errs.push('Set SNR from ≤ to and a positive step.');
+  else if ((to - from) / step > 40) errs.push('Use at most 40 SNR points.');
+  if (from < -20 || to > 60) errs.push('Sweep SNR must stay within −20 to 60 dB.');
+  if (!Number.isInteger(nbits) || nbits < 20 || nbits > 100000) errs.push('Random bits per point must be a whole number from 20 to 100,000.');
+  const mods = $$('#swMods input:checked').map(i => i.dataset.swmod);
+  if (!mods.length) errs.push('Select at least one modulation.');
+  if (errs.length){ prog.textContent = errs.join(' '); return; }
+  const snrs = []; for (let v = from; v <= to + 1e-9; v += step) snrs.push(+v.toFixed(3));
+  sweepBusy = true; $('#swRun').disabled = true;
+  const results = {}, notes = [];
+  try {
+    for (const mod of mods){
+      const cfg0 = { ...base, mod, noiseBy: 'snr' };
+      if (!MODS[mod].analog){
+        cfg0.snrRef = axis;
+        const dd = deriveDigital({ ...base, mod: mod === 'QAM' ? 'BPSK' : mod });
+        const spbMin = Math.max(8, Math.ceil(4 * base.fs / base.fc)), spb = Math.max(dd.spb, spbMin);
+        if (spb > dd.spb) notes.push(`${mod}: ${spb} samples per bit used (instead of ${dd.spb}) so every bit spans at least 4 carrier cycles.`);
+        let nb = nbits; const cap = Math.floor(600000 / spb); if (nb > cap){ nb = cap; notes.push(`${mod}: bits per point reduced to ${nb} to stay within 600,000 samples.`); }
+        const r = mulberry32(((base.dataSeed | 0) || 7) + 101); const bits = new Uint8Array(nb); for (let i = 0; i < nb; i++) bits[i] = r() < 0.5 ? 1 : 0;
+        cfg0._bits = bits; cfg0._spb = spb;
+      } else cfg0.snrRef = 'sample';
+      const rf = recommendedFilter(cfg0); if (rf) Object.assign(cfg0, rf);
+      const v = validate({ ...cfg0, snr: snrs[0] });
+      if (v.errors.length){ notes.push(`${mod} skipped: ${v.errors[0]}`); continue; }
+      results[mod] = [];
+      for (let i = 0; i < snrs.length; i++){
+        prog.textContent = `Running ${mod} at ${snrs[i]} dB (${i + 1} of ${snrs.length})…`;
+        await tick();
+        results[mod].push(runOnce({ ...cfg0, snr: snrs[i], noiseSeed: (base.noiseSeed | 0) + 17 * i + 3 }));
+      }
+    }
+    prog.textContent = `Sweep finished: ${Object.keys(results).length} modulation(s) × ${snrs.length} SNR points.`;
+  } catch (e){ console.error(e); prog.textContent = 'The sweep stopped: ' + e.message; }
+  sweepBusy = false; $('#swRun').disabled = false;
+  drawSweep(results, snrs, axis, base, notes);
+}
+function drawSweep(results, snrs, axis, base, notes){
+  const xs = Float64Array.from(snrs), axLabel = axis === 'ebn0' ? 'Eb/N0 (dB)' : 'Channel SNR (dB)';
+  const digital = Object.keys(results).filter(k => !MODS[k].analog), analog = Object.keys(results).filter(k => MODS[k].analog);
+  const berS = [], accS = [], mseS = [];
+  let zeroNote = false;
+  for (const k of digital){
+    const r = results[k];
+    const ber = Float64Array.from(r, p => p.BER > 0 ? p.BER : NaN); if (r.some(p => p.BER === 0)) zeroNote = true;
+    berS.push({ x: xs, y: ber, color: MODS[k].color, name: k === 'QAM' ? `${base.qamM}-QAM` : k, marker: true, width: 1.6 });
+    const spb = r[0].spb, K = 200, tx = new Float64Array(K), ty = new Float64Array(K);
+    for (let i = 0; i < K; i++){
+      const xv = xs[0] + (xs[xs.length - 1] - xs[0]) * i / (K - 1); tx[i] = xv;
+      const g = Math.pow(10, xv / 10) * (axis === 'ebn0' ? 1 : spb / 2);
+      let p;
+      if (k === 'BPSK') p = Qf(Math.sqrt(2 * g));
+      else if (k === 'ASK'){ const L = base.askLow; p = Qf(Math.sqrt(g * (1 - L) ** 2 / (1 + L * L))); }
+      else p = base.qamM === 4 ? Qf(Math.sqrt(2 * g)) : 0.375 * erfc(Math.sqrt(0.4 * g));
+      ty[i] = p > 1e-6 ? p : NaN;
+    }
+    berS.push({ x: tx, y: ty, color: MODS[k].color, dash: [5, 4], width: 1.1 });
+    accS.push({ x: xs, y: Float64Array.from(r, p => p.acc), color: MODS[k].color, name: k === 'QAM' ? `${base.qamM}-QAM` : k, marker: true, width: 1.6 });
+  }
+  for (const k of analog) mseS.push({ x: xs, y: Float64Array.from(results[k], p => p.mse), color: MODS[k].color, name: k, marker: true, width: 1.6 });
+  const xlim = [xs[0], xs[xs.length - 1] > xs[0] ? xs[xs.length - 1] : xs[0] + 1];
+  setPlot('p-ber', berS.length ? { series: berS, xlim, ylog: true, xlabel: axLabel, ylabel: 'Bit error rate' } : { empty: 'Select a digital modulation' });
+  setPlot('p-acc', accS.length ? { series: accS, xlim, xlabel: axLabel, ylabel: 'Accuracy (%)', ylim: [Math.min(45, ...accS.flatMap(s => [...s.y])) - 2, 101] } : { empty: 'Select a digital modulation' });
+  setPlot('p-mse', mseS.length ? { series: mseS, xlim, ylog: true, xlabel: 'Channel SNR (dB)', ylabel: 'MSE' } : { empty: 'Select AM or FM' });
+  const spbTxt = digital.length ? ` Digital runs use ${results[digital[0]][0].spb} samples per bit, so Eb/N0 = sample SNR + ${fmt(10 * Math.log10(results[digital[0]][0].spb / 2), 3)} dB.` : '';
+  $('#swNote').textContent = [
+    digital.length ? `Dashed lines are the theoretical BER for a coherent receiver. ${zeroNote ? 'Points with zero bit errors cannot be drawn on a log axis and are left out.' : ''}${spbTxt}` : '',
+    'Every scheme uses its recommended band-pass filter and a different noise seed at each SNR.', ...notes
+  ].filter(Boolean).join(' ');
+  const rows = [];
+  for (const k of Object.keys(results)) for (const p of results[k]) rows.push(p);
+  $('#swTable').innerHTML = rows.length ? `<thead><tr><th>Modulation</th><th>SNR set (dB)</th><th>Measured SNR (dB)</th><th>BER</th><th>Accuracy (%)</th><th>SER</th><th>MSE</th><th>Correlation</th></tr></thead><tbody>${rows.map(p => `<tr><td>${p.mod === 'QAM' ? base.qamM + '-QAM' : p.mod}</td><td>${p.snrSet}${MODS[p.mod].analog ? '' : axis === 'ebn0' ? ' Eb/N0' : ''}</td><td>${fmt(p.snrMeas, 4)}</td><td>${fmt(p.BER)}</td><td>${fmt(p.acc, 5)}</td><td>${fmt(p.SER)}</td><td>${fmt(p.mse)}</td><td>${fmt(p.corr, 4)}</td></tr>`).join('')}</tbody>` : '<tbody><tr><td class="empty">No results.</td></tr></tbody>';
+}
+
+/* ================= Comparison ================= */
+function runCompare(){
+  const base = readConfig(), rows = [], notes = [];
+  for (const mod of MOD_KEYS){
+    const cfg = { ...base, mod }; if (MODS[mod].analog && cfg.snrRef === 'ebn0') cfg.snrRef = 'sample';
+    const rf = recommendedFilter(cfg); if (rf) Object.assign(cfg, rf);
+    const v = validate(cfg);
+    if (v.errors.length){ notes.push(`${mod} skipped: ${v.errors[0]}`); continue; }
+    try { rows.push(runOnce(cfg)); } catch (e){ notes.push(`${mod} failed: ${e.message}`); }
+  }
+  $('#cmpTable').innerHTML = rows.length ? `<thead><tr><th>Modulation</th><th>Channel SNR (dB)</th><th>BER</th><th>Accuracy (%)</th><th>SER</th><th>MSE</th><th>RMSE</th><th>Output SNR (dB)</th><th>Correlation</th></tr></thead><tbody>${rows.map(p => `<tr><td>${p.mod === 'QAM' ? base.qamM + '-QAM' : p.mod}</td><td>${fmt(p.snrMeas, 4)}</td><td>${fmt(p.BER)}</td><td>${fmt(p.acc, 5)}</td><td>${fmt(p.SER)}</td><td>${fmt(p.mse)}</td><td>${fmt(p.rmse)}</td><td>${fmt(p.snrOut, 4)}</td><td>${fmt(p.corr, 4)}</td></tr>`).join('')}</tbody>` : '<tbody><tr><td class="empty">Nothing could run with the current settings.</td></tr></tbody>';
+  $('#cmpNote').textContent = ['For digital schemes MSE is measured between received and ideal symbol points. Output SNR and correlation apply to the analog message.', ...notes].join(' ');
+}
+
+/* ================= UI wiring ================= */
+function updateModUI(){
+  const analog = MODS[currentMod].analog, src = $('#dataSrc').value;
+  $$('[data-mods]').forEach(el => { const on = el.dataset.mods.split(' ').includes(currentMod) && (!el.dataset.src || el.dataset.src === src); el.hidden = !on; });
+  const opt = $('#snrRef option[value=ebn0]'); opt.disabled = analog; if (analog && $('#snrRef').value === 'ebn0') $('#snrRef').value = 'sample';
+  const by = $('#noiseBy').value; $$('[data-noise]').forEach(el => el.hidden = el.dataset.noise !== by);
+  const ft = $('#fType').value; $$('[data-ftype]').forEach(el => el.hidden = !el.dataset.ftype.split(' ').includes(ft));
+  updateHints();
+}
+function updateHints(){
+  const cfg = readConfig();
+  if (!MODS[currentMod].analog){
+    try {
+      const d = deriveDigital(cfg);
+      $('#digHint').textContent = (d.nb > 0 && cfg.fs > 0 && cfg.dur > 0) ? `${d.nb} bits, ${d.spb} samples per bit, ${fmt(d.Rb)} bit/s, ${fmt(cfg.fc / d.Rs, 3)} carrier cycles per symbol, ${d.N.toLocaleString()} samples in total.` : '';
+    } catch { $('#digHint').textContent = ''; }
+  }
+  if (currentMod === 'FM' && cfg.fdev > 0 && cfg.fm > 0) $('#fmHint').textContent = `Modulation index β = ${fmt(cfg.fdev / cfg.fm, 3)}, Carson bandwidth ${fmt(2 * (cfg.fdev + cfg.fm))} Hz.`;
+}
+function applyRecommended(){
+  const rf = recommendedFilter(readConfig()); if (!rf) return;
+  $('#fType').value = rf.fType; $('#fOrder').value = rf.fOrder;
+  if (rf.fType === 'band'){ $('#fLow').value = rf.fLow; $('#fHigh').value = rf.fHigh; } else $('#fCut').value = rf.fCut;
+  updateModUI();
+}
+function markStale(){ if (S && !stale){ stale = true; refreshUI(); } }
+
+$$('input[name=mod]').forEach(r => r.addEventListener('change', () => {
+  currentMod = r.value; updateModUI(); applyRecommended();
+  if (S) markStale(); else { renderMetrics(); renderTime(); renderConst(); }
+  showMessages({ errors: [], warnings: [] });
+}));
+$('#config').addEventListener('input', e => { if (e.target.id !== 'N' && (e.target.id === 'fs' || e.target.id === 'dur')){ const fs = numVal('fs'), d = numVal('dur'); if (fs > 0 && d > 0) $('#N').value = Math.round(fs * d); } updateHints(); markStale(); });
+$('#config').addEventListener('change', () => { updateModUI(); markStale(); });
+$('#N').addEventListener('input', () => { const fs = numVal('fs'), n = numVal('N'); if (fs > 0 && n > 0) $('#dur').value = +(n / fs).toPrecision(6); });
+$('#recFilter').addEventListener('click', () => { applyRecommended(); markStale(); });
+$('#snrChips').innerHTML = [0, 5, 10, 15, 20, 25, 30].map(v => `<button type="button" data-snr="${v}">${v} dB</button>`).join('');
+function syncChips(){ const v = numVal('snr'); $$('#snrChips button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.snr === v))); }
+$('#snrChips').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; $('#snr').value = b.dataset.snr; syncChips(); markStale(); });
+$('#snr').addEventListener('input', syncChips);
+
+$$('.stage').forEach(b => b.addEventListener('click', () => { const st = b.dataset.stage; runStage(st); if (st === 'fft') selectTab('spec'); }));
+$('#runAll').addEventListener('click', runAll);
+$('#win').addEventListener('change', renderTime);
+$('#winStart').addEventListener('input', renderTime);
+['#specScale', '#specWin', '#specMax'].forEach(s => $(s).addEventListener('change', renderSpectrum));
+$('#specChecks').addEventListener('change', renderSpectrum);
+$('#swRun').addEventListener('click', runSweep);
+$('#cmpRun').addEventListener('click', runCompare);
+
+function selectTab(name){
+  $$('[role=tab]').forEach(t => { const on = t.dataset.tab === name; t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1; $('#' + t.getAttribute('aria-controls')).hidden = !on; });
+  requestAnimationFrame(redrawVisible);
+}
+$$('[role=tab]').forEach(t => {
+  t.addEventListener('click', () => selectTab(t.dataset.tab));
+  t.addEventListener('keydown', e => {
+    const tabs = $$('[role=tab]'), i = tabs.indexOf(t);
+    let j = null; if (e.key === 'ArrowRight') j = (i + 1) % tabs.length; else if (e.key === 'ArrowLeft') j = (i - 1 + tabs.length) % tabs.length;
+    if (j !== null){ e.preventDefault(); tabs[j].focus(); selectTab(tabs[j].dataset.tab); }
+  });
+});
+
+// Initial state
+setPlot('p-ber', { empty: 'Run the SNR sweep' }); setPlot('p-acc', { empty: 'Run the SNR sweep' }); setPlot('p-mse', { empty: 'Run the SNR sweep' });
+updateModUI(); syncChips(); refreshUI();
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(redrawVisible);
+</script>
+</body>
+</html>
